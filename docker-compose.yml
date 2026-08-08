@@ -1,0 +1,20 @@
+# Local Postgres for fast dev (~1–5ms queries). Supabase stays for shared/staging/prod.
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: vaikuntham
+    volumes:
+      - vaikuntham_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vaikuntham"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  vaikuntham_pg:

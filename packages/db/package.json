@@ -1,0 +1,37 @@
+{
+  "name": "@vaikuntham/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "db:generate": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js generate",
+    "db:migrate": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js migrate dev",
+    "db:migrate:deploy": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js migrate deploy",
+    "db:push": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js db push",
+    "db:studio": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js studio",
+    "db:validate": "node -r ./load-env.cjs ./node_modules/prisma/build/index.js validate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "dotenv": "^17.4.2",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.11",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

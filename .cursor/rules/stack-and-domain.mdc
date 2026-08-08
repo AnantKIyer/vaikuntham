@@ -7,15 +7,17 @@ alwaysApply: true
 
 ## Stack
 
-- Next.js App Router + TypeScript strict
-- PostgreSQL (Neon) + Prisma 6
-- Clerk auth; Server Actions for mutations
-- No Convex; no client-side DB access
+- pnpm monorepo: `apps/web` (Next.js 15) + `apps/api` (NestJS 11)
+- PostgreSQL (Supabase) + Prisma 6 in `packages/db`
+- Clerk auth on web; API verifies JWT via `@clerk/backend`
+- Domain mutations via NestJS REST `/v1` — not Server Actions
+- Shared DTOs/permissions in `packages/shared`
+- No Convex; no Prisma or direct DB access in web
 
 ## Domain invariants
 
 - One active allotment per bed and per resident (enforce in transactions + DB)
-- Every domain write: `requireRole` + `hostelId` scope
+- Every domain write: role guard + `hostelId` scope
 - Audit sensitive mutations (`membership`, allotment, payments)
 - Amounts: integer paise — never `float` / `number` for money
 

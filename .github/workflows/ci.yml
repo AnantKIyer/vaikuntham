@@ -8,19 +8,44 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vaikuntham_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/vaikuntham_test?schema=public
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-      - run: npm ci
-      - run: npx prisma generate
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm db:migrate:deploy
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:permissions
+      - run: pnpm test:integration
         env:
-          DATABASE_URL: postgresql://user:pass@localhost:5432/ci?schema=public
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run test:permissions
-      - run: npx prisma validate
+          AUTH_DEV_BYPASS: "true"
+      - run: pnpm db:validate
+      - run: pnpm build
         env:
-          DATABASE_URL: postgresql://user:pass@localhost:5432/ci?schema=public
+          AUTH_DEV_BYPASS: "true"
+          NEXT_PUBLIC_AUTH_DEV_BYPASS: "true"
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          API_URL: http://localhost:3001
