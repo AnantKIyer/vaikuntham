@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  /* Institutional teal / ink — avoid purple SaaS & cream/terracotta defaults */
+  --color-canvas: #e8eef0;
+  --color-paper: #f7faf9;
+  --color-surface: #f0f5f4;
+  --color-surface-elevated: #e2ebe9;
+  --color-border: #c5d4d1;
+  --color-ink: #132e2b;
+  --color-ink-soft: #2a4a46;
+  --color-muted: #5a7370;
+  --color-accent: #1d6b63;
+  --color-accent-soft: #d5ebe7;
+  --color-danger: #9b2c2c;
+
+  --status-vacant: #1d6b63;
+  --status-vacant-bg: #d5ebe7;
+  --status-occupied: #1e4d7b;
+  --status-occupied-bg: #d9e8f5;
+  --status-partial: #8a5a12;
+  --status-partial-bg: #f5e6c8;
+  --status-overdue: #9b2c2c;
+  --status-overdue-bg: #f5d6d6;
+  --status-blocked: #5a7370;
+  --status-blocked-bg: #e2ebe9;
+
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #cfe3df 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #d4dde8 0%, transparent 50%),
+    var(--color-canvas);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+/* Skeleton shimmer — respects reduced motion */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-elevated) 0%,
+    var(--color-surface) 35%,
+    var(--color-paper) 50%,
+    var(--color-surface) 65%,
+    var(--color-surface-elevated) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: var(--color-surface-elevated);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
