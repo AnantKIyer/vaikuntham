@@ -1,0 +1,37 @@
+---
+description: Every line of code must earn its place — no speculative or decorative work
+alwaysApply: true
+---
+
+# Purposeful code (mandatory)
+
+Vaikuntham code exists to ship hostel operations. If a change does not serve a current user need, Linear story, or proven bug, do not write it.
+
+## Before writing
+
+1. Name the **user-facing purpose** (one sentence).
+2. Name the **Linear issue** (e.g. CB-127) or explicit user request.
+3. Prefer extending an existing module over a new abstraction.
+
+## Do not add
+
+- Unused helpers, types, hooks, or components “for later”
+- Speculative config, feature flags, or empty folders
+- Comments that restate the code; only explain non-obvious *why*
+- Extra dependencies when stdlib / existing libs suffice
+- Duplicate UI patterns when `components/ui/*` already covers it
+- Logging of PII; audit via `writeAuditLog` for sensitive writes only
+
+## When changing code
+
+- Delete dead code in the same change when you replace it
+- Keep Server Actions thin: authz → validate (Zod) → transaction → audit
+- Money: integer paise only; tenancy: always scope by `hostelId`
+- One primary CTA per page header; no decorative cards in hero-style chrome
+
+## PR / agent checklist
+
+- [ ] Purpose stated (comment in PR or commit body)
+- [ ] Linked to a story or user ask
+- [ ] No files added without a caller
+- [ ] No new abstraction used in fewer than two places (wait for the second use)

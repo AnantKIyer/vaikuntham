@@ -20,6 +20,7 @@ jobs:
           DATABASE_URL: postgresql://user:pass@localhost:5432/ci?schema=public
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run test:permissions
       - run: npx prisma validate
         env:
           DATABASE_URL: postgresql://user:pass@localhost:5432/ci?schema=public

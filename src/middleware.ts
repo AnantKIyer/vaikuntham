@@ -1,6 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -11,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
 
 const bypass =
   process.env.AUTH_DEV_BYPASS === "true" &&
+  process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true" &&
   process.env.NODE_ENV !== "production";
 
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
@@ -28,14 +28,7 @@ export default clerkConfigured && !bypass
         await auth.protect();
       }
     })
-  : function middleware(req: NextRequest) {
-      if (bypass || isPublicRoute(req)) {
-        return NextResponse.next();
-      }
-      // Without Clerk keys, allow app routes so foundation UI can be reviewed
-      if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/app")) {
-        return NextResponse.next();
-      }
+  : function middleware() {
       return NextResponse.next();
     };
 

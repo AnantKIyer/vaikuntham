@@ -5,11 +5,18 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { can, type Permission } from "@/lib/permissions";
 import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
+import {
+  ensureMembership,
+  getOrCreateDemoHostel,
+} from "@/server/auth/ensure-membership";
 
 export class AuthError extends Error {
   constructor(
     message: string,
-    public readonly code: "UNAUTHENTICATED" | "FORBIDDEN" | "NO_HOSTEL" = "FORBIDDEN",
+    public readonly code:
+      | "UNAUTHENTICATED"
+      | "FORBIDDEN"
+      | "NO_HOSTEL" = "FORBIDDEN",
   ) {
     super(message);
     this.name = "AuthError";
@@ -22,19 +29,43 @@ export type SessionContext = {
   role: Role;
   email?: string | null;
   fullName?: string | null;
+  hostelName?: string | null;
 };
 
-const DEV_SESSION: SessionContext = {
-  userId: "dev_user_admin",
-  hostelId: "dev_hostel",
-  role: Role.ADMIN,
-  email: "admin@vaikuntham.local",
-  fullName: "Dev Admin",
-};
+const DEV_USER_ID = "dev_user_admin";
+
+async function getDevSession(): Promise<SessionContext> {
+  const hostel = await getOrCreateDemoHostel();
+
+  // Keep Settings membership list consistent with the bypass session
+  await prisma.membership.upsert({
+    where: {
+      hostelId_clerkUserId: {
+        hostelId: hostel.id,
+        clerkUserId: DEV_USER_ID,
+      },
+    },
+    update: { role: Role.ADMIN },
+    create: {
+      hostelId: hostel.id,
+      clerkUserId: DEV_USER_ID,
+      role: Role.ADMIN,
+    },
+  });
+
+  return {
+    userId: DEV_USER_ID,
+    hostelId: hostel.id,
+    role: Role.ADMIN,
+    email: "admin@vaikuntham.local",
+    fullName: "Dev Admin",
+    hostelName: hostel.name,
+  };
+}
 
 export async function getSession(): Promise<SessionContext | null> {
   if (isAuthDevBypass()) {
-    return DEV_SESSION;
+    return getDevSession();
   }
 
   if (!isClerkConfigured()) {
@@ -44,33 +75,36 @@ export async function getSession(): Promise<SessionContext | null> {
   const { userId, orgId } = await auth();
   if (!userId) return null;
 
-  const membership = orgId
-    ? await prisma.membership.findFirst({
-        where: {
-          clerkUserId: userId,
-          hostel: { clerkOrgId: orgId },
-        },
-        include: { hostel: true },
-      })
-    : await prisma.membership.findFirst({
-        where: { clerkUserId: userId },
-        include: { hostel: true },
-        orderBy: { createdAt: "asc" },
-      });
+  const user = await currentUser();
+  const email = user?.primaryEmailAddress?.emailAddress;
+  const fullName = user?.fullName;
 
-  if (!membership) {
-    return null;
+  if (orgId) {
+    const byOrg = await prisma.membership.findFirst({
+      where: {
+        clerkUserId: userId,
+        hostel: { clerkOrgId: orgId },
+      },
+      include: { hostel: true },
+    });
+    if (byOrg) {
+      return {
+        userId,
+        hostelId: byOrg.hostelId,
+        role: byOrg.role,
+        email,
+        fullName,
+        hostelName: byOrg.hostel.name,
+      };
+    }
   }
 
-  const user = await currentUser();
-
-  return {
-    userId,
-    hostelId: membership.hostelId,
-    role: membership.role,
-    email: user?.primaryEmailAddress?.emailAddress,
-    fullName: user?.fullName,
-  };
+  return ensureMembership({
+    clerkUserId: userId,
+    email,
+    fullName,
+    clerkOrgId: orgId,
+  });
 }
 
 export async function requireSession(): Promise<SessionContext> {

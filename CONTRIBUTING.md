@@ -25,13 +25,17 @@ Reference Linear IDs in the body when useful (`CB-122`).
 
 | Area | Rule |
 |------|------|
+| Purpose | Every change must serve a current story or user ask — no speculative code |
 | TypeScript | `strict`; avoid `any` |
 | Data | Prisma only from server code |
 | Authz | `requireRole(permission)` on sensitive writes |
 | Money | Integer paise (`Int` / `BigInt`) |
 | Tenancy | Filter by `hostelId` on every query |
 | Allotment | Use `$transaction`; respect unique active constraints |
-| UI | One primary CTA per page header; labeled actions |
+| UI | One primary CTA per page header; reuse `components/ui` |
+| Abstractions | Wait for the second use before extracting |
+
+See `.cursor/rules/purposeful-code.mdc` (always applied in Cursor).
 
 ## Environment
 

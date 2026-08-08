@@ -1,13 +1,18 @@
+import { redirect } from "next/navigation";
 import { SignIn } from "@clerk/nextjs";
-import { isClerkConfigured } from "@/lib/utils";
 import Link from "next/link";
+import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 
 export default function SignInPage() {
+  if (isAuthDevBypass()) {
+    redirect("/dashboard");
+  }
+
   if (!isClerkConfigured()) {
     return (
       <SetupAuth
         title="Sign in"
-        message="Add Clerk keys to .env to enable authentication, or set AUTH_DEV_BYPASS=true for local UI review."
+        message="Add Clerk keys to .env, or set AUTH_DEV_BYPASS=true and NEXT_PUBLIC_AUTH_DEV_BYPASS=true for local UI without Clerk."
       />
     );
   }
@@ -22,16 +27,16 @@ export default function SignInPage() {
 function SetupAuth({ title, message }: { title: string; message: string }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] p-6 text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl text-[var(--color-ink)]">
+      <div className="max-w-md rounded-lg border border-(--color-border) bg-(--color-paper) p-6 text-center">
+        <h1 className="font-display text-2xl text-(--color-ink)">
           {title}
         </h1>
-        <p className="mt-3 text-sm text-[var(--color-muted)]">{message}</p>
+        <p className="mt-3 text-sm text-(--color-muted)">{message}</p>
         <Link
-          href="/dashboard"
-          className="mt-6 inline-block text-sm font-medium text-[var(--color-accent)] underline-offset-2 hover:underline"
+          href="/"
+          className="mt-6 inline-block text-sm font-medium text-(--color-accent) underline-offset-2 hover:underline"
         >
-          Continue to dashboard
+          Back to home
         </Link>
       </div>
     </div>

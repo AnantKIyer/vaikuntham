@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 
 const tones = {
-  vacant: "bg-[var(--status-vacant-bg)] text-[var(--status-vacant)]",
-  occupied: "bg-[var(--status-occupied-bg)] text-[var(--status-occupied)]",
-  partial: "bg-[var(--status-partial-bg)] text-[var(--status-partial)]",
-  overdue: "bg-[var(--status-overdue-bg)] text-[var(--status-overdue)]",
-  blocked: "bg-[var(--status-blocked-bg)] text-[var(--status-blocked)]",
-  neutral: "bg-[var(--color-surface)] text-[var(--color-muted)]",
+  vacant: "bg-(--status-vacant-bg) text-(--status-vacant)",
+  occupied: "bg-(--status-occupied-bg) text-(--status-occupied)",
+  partial: "bg-(--status-partial-bg) text-(--status-partial)",
+  overdue: "bg-(--status-overdue-bg) text-(--status-overdue)",
+  blocked: "bg-(--status-blocked-bg) text-(--status-blocked)",
+  neutral: "bg-(--color-surface) text-(--color-muted)",
 } as const;
 
 export type StatusTone = keyof typeof tones;

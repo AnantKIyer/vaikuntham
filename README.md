@@ -10,7 +10,7 @@ Hostel management platform — allotment, fees, occupancy, and operations.
 
 ```bash
 cp .env.example .env
-# Fill Neon DATABASE_URL + DIRECT_URL (and optionally Clerk keys)
+# Fill Neon DATABASE_URL (and optionally Clerk keys)
 
 npm install
 npm run db:generate
@@ -34,8 +34,10 @@ When you switch to Neon **pooled** URLs later, add `directUrl = env("DIRECT_URL"
 
 | Mode | Config |
 |------|--------|
-| Clerk | Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` |
-| Local UI without Clerk | `AUTH_DEV_BYPASS=true` (never in production) |
+| Clerk | Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY`, both bypass flags `false` |
+| Local UI without Clerk | Set **both** `AUTH_DEV_BYPASS=true` and `NEXT_PUBLIC_AUTH_DEV_BYPASS=true` (never in production) |
+
+Use **email** sign-in in Clerk (Indian +91 phone numbers are not supported on typical Clerk plans). If the browser shows Clerk 401 cookie errors, clear localhost/Clerk cookies or use a private window — or enable both bypass flags for local UI.
 
 ## Scripts
 

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -8,11 +8,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants = {
   primary:
-    "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink-soft)]",
+    "bg-(--color-ink) text-(--color-paper) hover:bg-(--color-ink-soft)",
   secondary:
-    "bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-border)] hover:bg-[var(--color-surface-elevated)]",
-  ghost: "bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-surface)]",
-  danger: "bg-[var(--color-danger)] text-white hover:opacity-90",
+    "bg-(--color-surface) text-(--color-ink) border border-(--color-border) hover:bg-(--color-surface-elevated)",
+  ghost: "bg-transparent text-(--color-ink) hover:bg-(--color-surface)",
+  danger: "bg-(--color-danger) text-white hover:opacity-90",
 };
 
 const sizes = {
@@ -21,23 +21,23 @@ const sizes = {
   lg: "h-12 px-5 text-base",
 };
 
-export function Button({
-  className,
-  variant = "primary",
-  size = "md",
-  type = "button",
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      type={type}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:pointer-events-none disabled:opacity-50",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    { className, variant = "primary", size = "md", type = "button", ...props },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type={type}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) disabled:pointer-events-none disabled:opacity-50",
+          variants[variant],
+          sizes[size],
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
