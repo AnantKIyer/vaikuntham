@@ -9,7 +9,7 @@ function getPublishableKey(): string | null {
   return key;
 }
 
-/** Client-visible bypass — must be NEXT_PUBLIC_ to skip Clerk JS in the browser */
+/** Skip Clerk JS when local bypass is on (must match server AUTH_DEV_BYPASS). */
 function isClientAuthBypass(): boolean {
   return process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";
 }

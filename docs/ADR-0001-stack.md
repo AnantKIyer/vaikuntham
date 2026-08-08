@@ -11,4 +11,4 @@ Use **PostgreSQL on Neon** + **Prisma 6** + **Next.js Server Actions**, with **C
 
 - Prisma 6 (not 7) for familiar `url`/`directUrl` Neon workflow
 - Realtime occupancy deferred (refresh-on-navigate for demo)
-- `AUTH_DEV_BYPASS` for UI without Clerk keys during foundation
+- `AUTH_DEV_BYPASS` + `NEXT_PUBLIC_AUTH_DEV_BYPASS` (both required) for UI without Clerk during foundation

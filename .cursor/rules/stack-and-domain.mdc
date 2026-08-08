@@ -1,0 +1,25 @@
+---
+description: Vaikuntham stack and domain invariants for hostel management
+alwaysApply: true
+---
+
+# Stack & domain locks
+
+## Stack
+
+- Next.js App Router + TypeScript strict
+- PostgreSQL (Neon) + Prisma 6
+- Clerk auth; Server Actions for mutations
+- No Convex; no client-side DB access
+
+## Domain invariants
+
+- One active allotment per bed and per resident (enforce in transactions + DB)
+- Every domain write: `requireRole` + `hostelId` scope
+- Audit sensitive mutations (`membership`, allotment, payments)
+- Amounts: integer paise — never `float` / `number` for money
+
+## UI
+
+- Use existing shell / `DataTable` / `EmptyState` / `Button` / field primitives
+- Status tones via `StatusPill` only — semantic, not decorative

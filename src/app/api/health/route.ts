@@ -1,10 +1,24 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    service: "vaikuntham",
-    phase: "foundation",
-    timestamp: new Date().toISOString(),
-  });
+  let db: "up" | "down" = "down";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    db = "up";
+  } catch {
+    db = "down";
+  }
+
+  const ok = db === "up";
+  return NextResponse.json(
+    {
+      ok,
+      service: "vaikuntham",
+      phase: "foundation",
+      db,
+      timestamp: new Date().toISOString(),
+    },
+    { status: ok ? 200 : 503 },
+  );
 }

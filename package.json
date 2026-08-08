@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
     "typecheck": "tsc --noEmit",
+    "test:permissions": "tsx src/lib/permissions.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
