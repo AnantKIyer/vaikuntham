@@ -46,6 +46,29 @@ Run both apps locally: `pnpm dev` (API :3001, web :3000).
 
 **Region:** local Postgres or Supabase project must be in your region. See README “Required operations”.
 
+## Provisioning a hostel (Clerk mode)
+
+When `AUTH_DEV_BYPASS=false`, staff must belong to a Clerk org linked to a `Hostel.clerkOrgId`. Operators create that binding with the bootstrap token (not end-user JWT):
+
+1. Set a long random `HOSTEL_BOOTSTRAP_TOKEN` in API `.env` and restart the API.
+2. Create + optionally link an org:
+
+```bash
+HOSTEL_BOOTSTRAP_TOKEN=... API_URL=http://localhost:3001 \
+  node scripts/bootstrap-hostel.mjs --name "Green Valley" --org org_xxx
+```
+
+Or call the API directly:
+
+- `POST /v1/hostels` — body `{ name, slug?, address?, clerkOrgId? }`
+- `PATCH /v1/hostels/:id/link-org` — body `{ clerkOrgId }` (idempotent; unique per hostel)
+
+3. First Clerk user in that org who signs in becomes `ADMIN`. Further staff need invites (`POST /v1/memberships/invites`).
+
+**Clerk config:** Use email sign-in. The API resolves invite emails via Clerk `users.getUser` when the JWT omits email — no custom JWT template required.
+
+Do not expose `HOSTEL_BOOTSTRAP_TOKEN` to the web app.
+
 ## PR checklist
 
 - [ ] Linked Linear issue

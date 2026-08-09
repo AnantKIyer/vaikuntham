@@ -1,4 +1,12 @@
+import { existsSync } from "fs";
+import { resolve } from "path";
+import { config } from "dotenv";
 import { PrismaClient, Role } from "@vaikuntham/db";
+
+const rootEnv = resolve(__dirname, "../../../../.env");
+if (existsSync(rootEnv)) {
+  config({ path: rootEnv });
+}
 
 export const prisma = new PrismaClient();
 

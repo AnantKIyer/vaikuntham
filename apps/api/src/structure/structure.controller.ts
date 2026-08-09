@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -9,9 +10,15 @@ import {
 } from "@nestjs/common";
 import { BedStatus, BED_STATUS_VALUES } from "@vaikuntham/shared";
 import {
+  bulkDeleteBedsSchema,
+  bulkRenameBedsSchema,
   createBlockSchema,
   createFloorSchema,
   createRoomsBulkSchema,
+  renameBedSchema,
+  renameBlockSchema,
+  renameFloorSchema,
+  renameRoomSchema,
   setBedStatusSchema,
   type PageWithSession,
   type RoomsBoardDto,
@@ -108,6 +115,30 @@ export class StructureController {
     return { ok: true, data };
   }
 
+  @Post("beds/delete")
+  async deleteBedsBulk(
+    @CurrentSession() session: SessionContext,
+    @Body(new ZodValidationPipe(bulkDeleteBedsSchema)) body: unknown,
+  ) {
+    const data = await this.structure.deleteBedsBulk(
+      session,
+      body as Parameters<StructureService["deleteBedsBulk"]>[1],
+    );
+    return { ok: true, data };
+  }
+
+  @Post("beds/rename")
+  async renameBedsBulk(
+    @CurrentSession() session: SessionContext,
+    @Body(new ZodValidationPipe(bulkRenameBedsSchema)) body: unknown,
+  ) {
+    const data = await this.structure.renameBedsBulk(
+      session,
+      body as Parameters<StructureService["renameBedsBulk"]>[1],
+    );
+    return { ok: true, data };
+  }
+
   @Patch("beds/:bedId/status")
   async setBedStatus(
     @CurrentSession() session: SessionContext,
@@ -118,6 +149,71 @@ export class StructureController {
       session,
       bedId,
       body as Parameters<StructureService["setBedStatus"]>[2],
+    );
+    return { ok: true, data };
+  }
+
+  @Delete("beds/:bedId")
+  async deleteBed(
+    @CurrentSession() session: SessionContext,
+    @Param("bedId") bedId: string,
+  ) {
+    const data = await this.structure.deleteBed(session, bedId);
+    return { ok: true, data };
+  }
+
+  @Patch("beds/:bedId")
+  async renameBed(
+    @CurrentSession() session: SessionContext,
+    @Param("bedId") bedId: string,
+    @Body(new ZodValidationPipe(renameBedSchema)) body: unknown,
+  ) {
+    const data = await this.structure.renameBed(
+      session,
+      bedId,
+      body as Parameters<StructureService["renameBed"]>[2],
+    );
+    return { ok: true, data };
+  }
+
+  @Patch("rooms/:roomId")
+  async renameRoom(
+    @CurrentSession() session: SessionContext,
+    @Param("roomId") roomId: string,
+    @Body(new ZodValidationPipe(renameRoomSchema)) body: unknown,
+  ) {
+    const data = await this.structure.renameRoom(
+      session,
+      roomId,
+      body as Parameters<StructureService["renameRoom"]>[2],
+    );
+    return { ok: true, data };
+  }
+
+  @Patch("floors/:floorId")
+  async renameFloor(
+    @CurrentSession() session: SessionContext,
+    @Param("floorId") floorId: string,
+    @Body(new ZodValidationPipe(renameFloorSchema)) body: unknown,
+  ) {
+    const data = await this.structure.renameFloor(
+      session,
+      floorId,
+      body as Parameters<StructureService["renameFloor"]>[2],
+    );
+    return { ok: true, data };
+  }
+
+  @Patch("blocks/:blockId")
+  async renameBlock(
+    @CurrentSession() session: SessionContext,
+    @Param("blockId") blockId: string,
+    @Body(new ZodValidationPipe(renameBlockSchema)) body: unknown,
+  ) {
+    const data = await this.structure.renameBlock(
+      session,
+      blockId,
+      body as Parameters<StructureService["renameBlock"]>[2],
     );
     return { ok: true, data };
   }

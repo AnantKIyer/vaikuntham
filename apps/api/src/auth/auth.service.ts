@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
-import { Role } from "@vaikuntham/db";
+import { Prisma, Role } from "@vaikuntham/db";
 import { can, type Permission, type SessionContext } from "@vaikuntham/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -8,6 +8,8 @@ import {
   isAuthDevBypass,
   normalizeEmail,
 } from "./auth.utils";
+
+type DbTx = Prisma.TransactionClient;
 
 const DEMO_SLUG = "demo-hostel";
 const DEV_USER_ID = "dev_user_admin";
@@ -26,6 +28,10 @@ export class AuthService implements OnModuleInit {
   private readonly sessionInflight = new Map<
     string,
     Promise<SessionContext>
+  >();
+  private readonly clerkEmailCache = new Map<
+    string,
+    { email: string | null; expiresAt: number }
   >();
 
   constructor(
@@ -193,45 +199,93 @@ export class AuthService implements OnModuleInit {
     });
   }
 
+  /**
+   * First org member → ADMIN; otherwise claim a pending invite.
+   * Hostel row is locked so concurrent bootstraps / invite accepts cannot race.
+   */
   private async provisionOrgMember(input: {
     userId: string;
     email?: string | null;
     fullName?: string | null;
     hostel: { id: string; name: string };
   }): Promise<SessionContext> {
-    const memberCount = await this.prisma.membership.count({
-      where: { hostelId: input.hostel.id },
-    });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`
+          SELECT id FROM "Hostel" WHERE id = ${input.hostel.id} FOR UPDATE
+        `;
 
-    if (memberCount === 0) {
-      return this.createMembership({
-        clerkUserId: input.userId,
-        hostelId: input.hostel.id,
-        role: Role.ADMIN,
-        email: input.email,
-        fullName: input.fullName,
-        hostelName: input.hostel.name,
-        auditAction: "membership.bootstrap",
-      });
-    }
+        const already = await tx.membership.findUnique({
+          where: {
+            hostelId_clerkUserId: {
+              hostelId: input.hostel.id,
+              clerkUserId: input.userId,
+            },
+          },
+        });
+        if (already) {
+          return this.toSession({
+            userId: input.userId,
+            hostelId: input.hostel.id,
+            role: already.role,
+            email: input.email,
+            fullName: input.fullName,
+            hostelName: input.hostel.name,
+          });
+        }
 
-    if (input.email) {
-      const invite = await this.prisma.membershipInvite.findFirst({
-        where: {
-          hostelId: input.hostel.id,
-          email: normalizeEmail(input.email),
-          acceptedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-      if (invite) {
-        await this.prisma.membershipInvite.update({
-          where: { id: invite.id },
-          data: { acceptedAt: new Date() },
+        const memberCount = await tx.membership.count({
+          where: { hostelId: input.hostel.id },
         });
 
-        return this.createMembership({
+        if (memberCount === 0) {
+          return this.createMembershipInTx(tx, {
+            clerkUserId: input.userId,
+            hostelId: input.hostel.id,
+            role: Role.ADMIN,
+            email: input.email,
+            fullName: input.fullName,
+            hostelName: input.hostel.name,
+            auditAction: "membership.bootstrap",
+          });
+        }
+
+        if (!input.email) {
+          throw new AuthError(
+            "Invite required to join this hostel. Ask an admin to invite your email.",
+            "NOT_PROVISIONED",
+          );
+        }
+
+        const email = normalizeEmail(input.email);
+        const now = new Date();
+        const claimed = await tx.membershipInvite.updateMany({
+          where: {
+            hostelId: input.hostel.id,
+            email,
+            acceptedAt: null,
+            expiresAt: { gt: now },
+          },
+          data: { acceptedAt: now },
+        });
+
+        if (claimed.count !== 1) {
+          throw new AuthError(
+            "Invite required to join this hostel. Ask an admin to invite your email.",
+            "NOT_PROVISIONED",
+          );
+        }
+
+        const invite = await tx.membershipInvite.findUniqueOrThrow({
+          where: {
+            hostelId_email: {
+              hostelId: input.hostel.id,
+              email,
+            },
+          },
+        });
+
+        return this.createMembershipInTx(tx, {
           clerkUserId: input.userId,
           hostelId: input.hostel.id,
           role: invite.role,
@@ -241,26 +295,49 @@ export class AuthService implements OnModuleInit {
           auditAction: "membership.invite_accept",
           auditMetadata: { inviteId: invite.id },
         });
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
+        const existing = await this.prisma.membership.findUnique({
+          where: {
+            hostelId_clerkUserId: {
+              hostelId: input.hostel.id,
+              clerkUserId: input.userId,
+            },
+          },
+        });
+        if (existing) {
+          return this.toSession({
+            userId: input.userId,
+            hostelId: input.hostel.id,
+            role: existing.role,
+            email: input.email,
+            fullName: input.fullName,
+            hostelName: input.hostel.name,
+          });
+        }
       }
+      throw e;
     }
-
-    throw new AuthError(
-      "Invite required to join this hostel. Ask an admin to invite your email.",
-      "NOT_PROVISIONED",
-    );
   }
 
-  private async createMembership(input: {
-    clerkUserId: string;
-    hostelId: string;
-    role: Role;
-    email?: string | null;
-    fullName?: string | null;
-    hostelName: string;
-    auditAction: string;
-    auditMetadata?: Record<string, unknown>;
-  }): Promise<SessionContext> {
-    const membership = await this.prisma.membership.create({
+  private async createMembershipInTx(
+    tx: DbTx,
+    input: {
+      clerkUserId: string;
+      hostelId: string;
+      role: Role;
+      email?: string | null;
+      fullName?: string | null;
+      hostelName: string;
+      auditAction: string;
+      auditMetadata?: Record<string, unknown>;
+    },
+  ): Promise<SessionContext> {
+    const membership = await tx.membership.create({
       data: {
         hostelId: input.hostelId,
         clerkUserId: input.clerkUserId,
@@ -268,16 +345,18 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    await this.audit.write({
-      actorId: input.clerkUserId,
-      action: input.auditAction,
-      entityType: "Membership",
-      entityId: membership.id,
-      hostelId: input.hostelId,
-      metadata: {
-        role: input.role,
-        email: input.email ?? null,
-        ...input.auditMetadata,
+    await tx.auditLog.create({
+      data: {
+        actorId: input.clerkUserId,
+        action: input.auditAction,
+        entityType: "Membership",
+        entityId: membership.id,
+        hostelId: input.hostelId,
+        metadata: {
+          role: input.role,
+          email: input.email ?? null,
+          ...input.auditMetadata,
+        },
       },
     });
 
@@ -355,7 +434,17 @@ export class AuthService implements OnModuleInit {
     }));
   }
 
-  async resolveSession(authHeader?: string): Promise<SessionContext> {
+  async resolveSession(
+    authHeader?: string,
+    testUserId?: string,
+  ): Promise<SessionContext> {
+    if (
+      process.env.ALLOW_TEST_AUTH_HEADERS === "true" &&
+      testUserId?.trim()
+    ) {
+      return this.resolveTestSession(testUserId.trim());
+    }
+
     if (isAuthDevBypass()) {
       return this.getDevSession();
     }
@@ -397,10 +486,14 @@ export class AuthService implements OnModuleInit {
 
     const orgId =
       typeof payload.org_id === "string" ? payload.org_id : undefined;
-    const email =
+    let email =
       typeof payload.email === "string" ? payload.email : undefined;
     const fullName =
       typeof payload.name === "string" ? payload.name : undefined;
+
+    if (!email) {
+      email = (await this.resolveClerkPrimaryEmail(userId)) ?? undefined;
+    }
 
     const session = await this.resolveSessionFromClerk({
       userId,
@@ -415,6 +508,49 @@ export class AuthService implements OnModuleInit {
     });
 
     return session;
+  }
+
+  /** Clerk JWT often omits email — fetch primary address for invite matching (CB-153). */
+  async resolveClerkPrimaryEmail(userId: string): Promise<string | null> {
+    const cached = this.clerkEmailCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.email;
+    }
+
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerk = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
+    const user = await clerk.users.getUser(userId);
+    const primary =
+      user.emailAddresses.find(
+        (e) => e.id === user.primaryEmailAddressId,
+      ) ?? user.emailAddresses[0];
+    const email = primary?.emailAddress?.trim().toLowerCase() ?? null;
+
+    this.clerkEmailCache.set(userId, {
+      email,
+      expiresAt: Date.now() + SESSION_CACHE_MS,
+    });
+    return email;
+  }
+
+  /** Integration tests only — resolve session by seeded clerkUserId (CB-158). */
+  async resolveTestSession(clerkUserId: string): Promise<SessionContext> {
+    const membership = await this.prisma.membership.findFirst({
+      where: { clerkUserId },
+      include: { hostel: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!membership) {
+      throw new AuthError("Test user not provisioned", "NOT_PROVISIONED");
+    }
+    return this.toSession({
+      userId: clerkUserId,
+      hostelId: membership.hostelId,
+      role: membership.role,
+      hostelName: membership.hostel.name,
+    });
   }
 
   requirePermission(session: SessionContext, permission: Permission) {

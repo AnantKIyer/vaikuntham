@@ -45,10 +45,7 @@ export default async function RoomsPage({
         { label: "Rooms & beds" },
       ]}
     >
-      <Suspense
-        key={`${statusFilter}-${floorFilter ?? ""}`}
-        fallback={<RoomsContentSkeleton />}
-      >
+      <Suspense fallback={<RoomsContentSkeleton />}>
         <RoomsBoardPanel
           statusFilter={statusFilter}
           floorFilter={floorFilter}

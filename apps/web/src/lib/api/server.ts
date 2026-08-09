@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { ApiResult } from "@vaikuntham/shared";
 import { getApiUrl } from "./config";
+import { authFailureRedirectPath } from "./auth-failure";
 import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 
 /** One Clerk token lookup per RSC request (dedupes parallel apiFetch calls). */
@@ -56,14 +57,11 @@ export const apiFetch = cache(async function apiFetch<T>(
 
 export function redirectOnApiAuthFailure(result: ApiResult<unknown>): void {
   if (result.ok) return;
-  if (
-    result.code === "UNAUTHENTICATED" ||
-    result.code === "FORBIDDEN" ||
-    result.code === "NOT_PROVISIONED"
-  ) {
-    if (isClerkConfigured() && !isAuthDevBypass()) {
-      redirect("/sign-in");
-    }
+  const path = authFailureRedirectPath(result.code);
+  if (path) {
+    redirect(path);
+  }
+  if (result.code === "UNAUTHENTICATED" && !isClerkConfigured()) {
     redirect("/");
   }
 }

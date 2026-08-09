@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 export type DataTableColumn<T> = {
   key: string;
-  header: string;
+  header: React.ReactNode;
   className?: string;
   cell: (row: T) => React.ReactNode;
 };

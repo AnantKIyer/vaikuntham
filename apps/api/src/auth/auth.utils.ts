@@ -25,3 +25,23 @@ export function isClerkConfigured() {
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
+
+/** One-shot ops token for hostel create / link-org (CB-151). */
+export function assertBootstrapToken(authHeader?: string): void {
+  const expected = process.env.HOSTEL_BOOTSTRAP_TOKEN?.trim();
+  if (!expected) {
+    throw new AuthError(
+      "HOSTEL_BOOTSTRAP_TOKEN is not configured",
+      "FORBIDDEN",
+    );
+  }
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new AuthError("Bootstrap token required", "UNAUTHENTICATED");
+  }
+
+  const token = authHeader.slice("Bearer ".length).trim();
+  if (!token || token !== expected) {
+    throw new AuthError("Invalid bootstrap token", "UNAUTHENTICATED");
+  }
+}
