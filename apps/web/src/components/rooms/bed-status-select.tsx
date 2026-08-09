@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { API_ROUTES } from "@vaikuntham/shared";
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { useApiClient } from "@/lib/api/client";
+import { useAuthFailureHandler } from "@/lib/api/use-auth-failure-handler";
 
 const STATUS_TONE: Record<BedStatus, StatusTone> = {
   VACANT: "vacant",
@@ -30,6 +31,7 @@ export type BedRow = {
 
 export function BedStatusSelect({ bed }: { bed: BedRow }) {
   const api = useApiClient();
+  const handleAuthFailure = useAuthFailureHandler();
   const [pending, start] = useTransition();
   const [status, setStatus] = useState(bed.status);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function BedStatusSelect({ bed }: { bed: BedRow }) {
                 body: JSON.stringify({ status: next }),
               });
               if (!res.ok) {
+                if (handleAuthFailure(res)) return;
                 setStatus(prev);
                 setError(res.error);
               }

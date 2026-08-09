@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { useApiClient } from "@/lib/api/client";
+import { useAuthFailureHandler } from "@/lib/api/use-auth-failure-handler";
 
 type FloorOption = { id: string; label: string };
 type BlockOption = { id: string; name: string };
@@ -26,6 +27,7 @@ function FormMessage({ result }: { result: ActionResult | null }) {
 export function CreateBlockForm() {
   const router = useRouter();
   const api = useApiClient();
+  const handleAuthFailure = useAuthFailureHandler();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
 
@@ -54,6 +56,7 @@ export function CreateBlockForm() {
             body: JSON.stringify(parsed.data),
           });
           setResult(res.ok ? { ok: true } : res);
+          if (!res.ok && handleAuthFailure(res)) return;
           if (res.ok) router.refresh();
         });
       }}
@@ -94,6 +97,7 @@ export function CreateBlockForm() {
 export function CreateFloorForm({ blocks }: { blocks: BlockOption[] }) {
   const router = useRouter();
   const api = useApiClient();
+  const handleAuthFailure = useAuthFailureHandler();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
 
@@ -123,6 +127,7 @@ export function CreateFloorForm({ blocks }: { blocks: BlockOption[] }) {
             body: JSON.stringify(parsed.data),
           });
           setResult(res.ok ? { ok: true } : res);
+          if (!res.ok && handleAuthFailure(res)) return;
           if (res.ok) router.refresh();
         });
       }}
@@ -177,6 +182,7 @@ export function CreateFloorForm({ blocks }: { blocks: BlockOption[] }) {
 export function BulkRoomsForm({ floors }: { floors: FloorOption[] }) {
   const router = useRouter();
   const api = useApiClient();
+  const handleAuthFailure = useAuthFailureHandler();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
 
@@ -214,6 +220,7 @@ export function BulkRoomsForm({ floors }: { floors: FloorOption[] }) {
             body: JSON.stringify(parsed.data),
           });
           setResult(res.ok ? { ok: true } : res);
+          if (!res.ok && handleAuthFailure(res)) return;
           if (res.ok) router.refresh();
         });
       }}

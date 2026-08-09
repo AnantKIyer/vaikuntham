@@ -5,7 +5,8 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/api/health(.*)",
+  "/awaiting-access",
+  "/no-permission",
 ]);
 
 const bypass =

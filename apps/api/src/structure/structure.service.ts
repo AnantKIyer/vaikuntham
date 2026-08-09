@@ -8,9 +8,15 @@ import { BedStatus, Prisma } from "@vaikuntham/db";
 import type {
   BedsListDto,
   BlockTree,
+  BulkDeleteBedsInput,
+  BulkRenameBedsInput,
   CreateBlockInput,
   CreateFloorInput,
   CreateRoomsBulkInput,
+  RenameBedInput,
+  RenameBlockInput,
+  RenameFloorInput,
+  RenameRoomInput,
   RoomsBoardDto,
   SessionContext,
   SetBedStatusInput,
@@ -262,13 +268,6 @@ export class StructureService {
     bedId: string,
     input: SetBedStatusInput,
   ) {
-    if (input.status === BedStatus.OCCUPIED) {
-      throw new BadRequestException({
-        ok: false,
-        error: "Mark occupied via allotment — not bed status alone",
-      });
-    }
-
     const bed = await this.prisma.bed.findFirst({
       where: {
         id: bedId,
@@ -309,6 +308,239 @@ export class StructureService {
     });
 
     return { id: bed.id, status: input.status };
+  }
+
+  async deleteBed(session: SessionContext, bedId: string) {
+    return this.deleteBedsBulk(session, { ids: [bedId] });
+  }
+
+  async deleteBedsBulk(session: SessionContext, input: BulkDeleteBedsInput) {
+    const uniqueIds = [...new Set(input.ids)];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const bedId of uniqueIds) {
+        const bed = await tx.bed.findFirst({
+          where: {
+            id: bedId,
+            room: { floor: { block: { hostelId: session.hostelId } } },
+          },
+          include: {
+            allotments: { select: { id: true, status: true }, take: 1 },
+            _count: { select: { allotments: true } },
+          },
+        });
+
+        if (!bed) {
+          throw new NotFoundException({ ok: false, error: "Bed not found" });
+        }
+
+        if (bed.status === BedStatus.OCCUPIED) {
+          throw new BadRequestException({
+            ok: false,
+            error: "End the active allotment before deleting this bed",
+            code: "BED_OCCUPIED",
+          });
+        }
+
+        const activeAllotment = await tx.allotment.findFirst({
+          where: { bedId: bed.id, status: "ACTIVE" },
+        });
+        if (activeAllotment) {
+          throw new BadRequestException({
+            ok: false,
+            error: "End the active allotment before deleting this bed",
+            code: "BED_OCCUPIED",
+          });
+        }
+
+        if (bed._count.allotments > 0) {
+          throw new ConflictException({
+            ok: false,
+            error:
+              "This bed has allotment history and cannot be deleted. Use BLOCKED status instead.",
+            code: "ALLOTMENT_HISTORY",
+          });
+        }
+
+        await tx.bed.delete({ where: { id: bed.id } });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            hostelId: session.hostelId,
+            action: "structure.bed.delete",
+            entityType: "Bed",
+            entityId: bed.id,
+            metadata: { label: bed.label, roomId: bed.roomId },
+          },
+        });
+      }
+    });
+
+    return { deleted: uniqueIds.length };
+  }
+
+  async renameBed(
+    session: SessionContext,
+    bedId: string,
+    input: RenameBedInput,
+  ) {
+    return this.renameBedsBulk(session, {
+      items: [{ id: bedId, label: input.label }],
+    }).then(() => ({ id: bedId, label: input.label }));
+  }
+
+  async renameBedsBulk(session: SessionContext, input: BulkRenameBedsInput) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        for (const item of input.items) {
+          const bed = await tx.bed.findFirst({
+            where: {
+              id: item.id,
+              room: { floor: { block: { hostelId: session.hostelId } } },
+            },
+          });
+          if (!bed) {
+            throw new NotFoundException({ ok: false, error: "Bed not found" });
+          }
+          if (bed.label === item.label) continue;
+
+          const updated = await tx.bed.update({
+            where: { id: bed.id },
+            data: { label: item.label },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              actorId: session.userId,
+              hostelId: session.hostelId,
+              action: "structure.bed.rename",
+              entityType: "Bed",
+              entityId: bed.id,
+              metadata: { from: bed.label, to: updated.label },
+            },
+          });
+        }
+      });
+      return { renamed: input.items.length };
+    } catch (e) {
+      this.handlePrismaError(e);
+    }
+  }
+
+  async renameRoom(
+    session: SessionContext,
+    roomId: string,
+    input: RenameRoomInput,
+  ) {
+    const room = await this.prisma.room.findFirst({
+      where: {
+        id: roomId,
+        floor: { block: { hostelId: session.hostelId } },
+      },
+    });
+    if (!room) {
+      throw new NotFoundException({ ok: false, error: "Room not found" });
+    }
+
+    try {
+      const updated = await this.prisma.room.update({
+        where: { id: room.id },
+        data: { number: input.number },
+      });
+
+      await this.audit.write({
+        actorId: session.userId,
+        hostelId: session.hostelId,
+        action: "structure.room.rename",
+        entityType: "Room",
+        entityId: room.id,
+        metadata: { from: room.number, to: updated.number },
+      });
+
+      return { id: updated.id, number: updated.number };
+    } catch (e) {
+      this.handlePrismaError(e);
+    }
+  }
+
+  async renameFloor(
+    session: SessionContext,
+    floorId: string,
+    input: RenameFloorInput,
+  ) {
+    const floor = await this.prisma.floor.findFirst({
+      where: {
+        id: floorId,
+        block: { hostelId: session.hostelId },
+      },
+    });
+    if (!floor) {
+      throw new NotFoundException({ ok: false, error: "Floor not found" });
+    }
+
+    try {
+      const updated = await this.prisma.floor.update({
+        where: { id: floor.id },
+        data: { name: input.name },
+      });
+
+      await this.audit.write({
+        actorId: session.userId,
+        hostelId: session.hostelId,
+        action: "structure.floor.rename",
+        entityType: "Floor",
+        entityId: floor.id,
+        metadata: { from: floor.name, to: updated.name },
+      });
+
+      return { id: updated.id, name: updated.name };
+    } catch (e) {
+      this.handlePrismaError(e);
+    }
+  }
+
+  async renameBlock(
+    session: SessionContext,
+    blockId: string,
+    input: RenameBlockInput,
+  ) {
+    const block = await this.prisma.block.findFirst({
+      where: { id: blockId, hostelId: session.hostelId },
+    });
+    if (!block) {
+      throw new NotFoundException({ ok: false, error: "Block not found" });
+    }
+
+    const data: { name?: string; code?: string | null } = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.code !== undefined) data.code = input.code;
+    if (Object.keys(data).length === 0) {
+      return { id: block.id, name: block.name, code: block.code };
+    }
+
+    try {
+      const updated = await this.prisma.block.update({
+        where: { id: block.id },
+        data,
+      });
+
+      await this.audit.write({
+        actorId: session.userId,
+        hostelId: session.hostelId,
+        action: "structure.block.rename",
+        entityType: "Block",
+        entityId: block.id,
+        metadata: {
+          from: { name: block.name, code: block.code },
+          to: { name: updated.name, code: updated.code },
+        },
+      });
+
+      return { id: updated.id, name: updated.name, code: updated.code };
+    } catch (e) {
+      this.handlePrismaError(e);
+    }
   }
 
   private handlePrismaError(e: unknown): never {

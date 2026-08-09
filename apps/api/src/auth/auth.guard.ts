@@ -8,7 +8,8 @@ import {
 import { Reflector } from "@nestjs/core";
 import type { Permission } from "@vaikuntham/shared";
 import { ALLOW_MEMBER_KEY } from "./allow-member.decorator";
-import { AuthError } from "./auth.utils";
+import { BOOTSTRAP_KEY } from "./bootstrap.decorator";
+import { assertBootstrapToken, AuthError } from "./auth.utils";
 import { AuthService } from "./auth.service";
 import { IS_PUBLIC_KEY } from "./public.decorator";
 import { PERMISSIONS_KEY } from "./roles.decorator";
@@ -30,13 +31,26 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<{
-      headers: { authorization?: string };
+      headers: {
+        authorization?: string;
+        "x-test-user-id"?: string;
+      };
       session?: Awaited<ReturnType<AuthService["resolveSession"]>>;
     }>();
 
     try {
+      const isBootstrap = this.reflector.getAllAndOverride<boolean>(
+        BOOTSTRAP_KEY,
+        [context.getHandler(), context.getClass()],
+      );
+      if (isBootstrap) {
+        assertBootstrapToken(request.headers.authorization);
+        return true;
+      }
+
       const session = await this.auth.resolveSession(
         request.headers.authorization,
+        request.headers["x-test-user-id"],
       );
       request.session = session;
 

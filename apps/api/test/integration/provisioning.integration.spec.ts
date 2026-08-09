@@ -105,4 +105,106 @@ describe("membership provisioning (integration)", () => {
     });
     expect(invite?.acceptedAt).not.toBeNull();
   });
+
+  it("allows only one ADMIN when two users bootstrap concurrently", async () => {
+    const hostel = await prisma.hostel.create({
+      data: {
+        name: "Race Hostel",
+        slug: "race-hostel",
+        clerkOrgId: "org_race_bootstrap",
+      },
+    });
+
+    const results = await Promise.allSettled([
+      auth.resolveSessionFromClerk({
+        userId: "user_race_a",
+        orgId: "org_race_bootstrap",
+        email: "a@example.com",
+      }),
+      auth.resolveSessionFromClerk({
+        userId: "user_race_b",
+        orgId: "org_race_bootstrap",
+        email: "b@example.com",
+      }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((fulfilled[0] as PromiseFulfilledResult<{ role: Role }>).value.role).toBe(
+      Role.ADMIN,
+    );
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(AuthError);
+    expect((rejected[0] as PromiseRejectedResult).reason.code).toBe(
+      "NOT_PROVISIONED",
+    );
+
+    const admins = await prisma.membership.findMany({
+      where: { hostelId: hostel.id, role: Role.ADMIN },
+    });
+    expect(admins).toHaveLength(1);
+    const members = await prisma.membership.count({
+      where: { hostelId: hostel.id },
+    });
+    expect(members).toBe(1);
+  });
+
+  it("allows only one accept when the same invite is claimed concurrently", async () => {
+    const hostel = await prisma.hostel.create({
+      data: {
+        name: "Invite Race Hostel",
+        slug: "invite-race-hostel",
+        clerkOrgId: "org_race_invite",
+        memberships: {
+          create: {
+            clerkUserId: "user_admin",
+            role: Role.ADMIN,
+          },
+        },
+        invites: {
+          create: {
+            email: "shared@example.com",
+            role: Role.WARDEN,
+            invitedById: "user_admin",
+            expiresAt: new Date(Date.now() + 86_400_000),
+          },
+        },
+      },
+    });
+
+    const results = await Promise.allSettled([
+      auth.resolveSessionFromClerk({
+        userId: "user_claim_a",
+        orgId: "org_race_invite",
+        email: "shared@example.com",
+      }),
+      auth.resolveSessionFromClerk({
+        userId: "user_claim_b",
+        orgId: "org_race_invite",
+        email: "shared@example.com",
+      }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(
+      (fulfilled[0] as PromiseFulfilledResult<{ role: Role }>).value.role,
+    ).toBe(Role.WARDEN);
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(AuthError);
+
+    const wardens = await prisma.membership.findMany({
+      where: { hostelId: hostel.id, role: Role.WARDEN },
+    });
+    expect(wardens).toHaveLength(1);
+
+    const invite = await prisma.membershipInvite.findFirst({
+      where: { hostelId: hostel.id, email: "shared@example.com" },
+    });
+    expect(invite?.acceptedAt).not.toBeNull();
+  });
 });

@@ -105,8 +105,8 @@ export async function SettingsPanel() {
           rowKey={(m) => m.id}
           empty={
             <EmptyState
-              title="No members"
-              body="Sign in with Clerk to bootstrap the first admin membership."
+              title="No members yet"
+              body="The first user in your Clerk organization becomes admin. Invite additional staff by email from Settings once CB-156 ships."
             />
           }
           columns={[

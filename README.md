@@ -72,6 +72,8 @@ Architecture note: each dashboard page goes **Web → API → Supabase**. Supaba
 | Provisioning | **No auto-join.** First user in an org → `ADMIN`. Everyone else needs a **membership invite** (email) from an admin |
 | Local UI without Clerk | `AUTH_DEV_BYPASS=true` on API + both web bypass flags `true` |
 
+**First customer / new hostel:** set `HOSTEL_BOOTSTRAP_TOKEN`, then `node scripts/bootstrap-hostel.mjs --name "…" --org org_…` (see CONTRIBUTING). Endpoints: `POST /v1/hostels`, `PATCH /v1/hostels/:id/link-org`.
+
 Invites: `POST /v1/memberships/invites` (admin) · list via `GET /v1/memberships/invites`.
 
 Use **email** sign-in in Clerk so invite emails match.
