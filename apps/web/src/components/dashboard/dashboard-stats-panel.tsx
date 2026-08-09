@@ -11,8 +11,8 @@ import { ROLE_LABELS } from "@vaikuntham/shared";
 type DashboardStats = {
   bedCount: number;
   occupiedCount: number;
-  auditCount: number;
-  memberCount: number;
+  auditCount: number | null;
+  memberCount: number | null;
 };
 
 export async function DashboardStatsPanel() {
@@ -37,6 +37,29 @@ export async function DashboardStatsPanel() {
   const bypass = isAuthDevBypass();
   const bypassMismatch = isAuthBypassMisconfigured();
 
+  const kpis: { label: string; value: string; hint: string }[] = [
+    { label: "Beds", value: String(bedCount), hint: "Across all blocks" },
+    {
+      label: "Occupancy",
+      value: occupancy,
+      hint: `${occupiedCount} occupied`,
+    },
+  ];
+  if (memberCount !== null) {
+    kpis.push({
+      label: "Staff members",
+      value: String(memberCount),
+      hint: ROLE_LABELS[session.role],
+    });
+  }
+  if (auditCount !== null) {
+    kpis.push({
+      label: "Audit events",
+      value: String(auditCount),
+      hint: "Sensitive actions",
+    });
+  }
+
   return (
     <>
       {bypassMismatch ? (
@@ -51,24 +74,7 @@ export async function DashboardStatsPanel() {
         </div>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Beds", value: String(bedCount), hint: "Across all blocks" },
-          {
-            label: "Occupancy",
-            value: occupancy,
-            hint: `${occupiedCount} occupied`,
-          },
-          {
-            label: "Staff members",
-            value: String(memberCount),
-            hint: ROLE_LABELS[session.role],
-          },
-          {
-            label: "Audit events",
-            value: String(auditCount),
-            hint: "Sensitive actions",
-          },
-        ].map((kpi) => (
+        {kpis.map((kpi) => (
           <div
             key={kpi.label}
             className="rounded-lg border border-(--color-border) bg-(--color-paper) px-4 py-4"
@@ -105,7 +111,7 @@ export async function DashboardStatsPanel() {
           </li>
           <li className="flex items-center gap-2">
             <StatusPill tone="partial">Next</StatusPill>
-            Residents, allotment, fees
+            Fee plans and payments (W3)
           </li>
         </ul>
       </section>

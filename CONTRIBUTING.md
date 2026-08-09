@@ -15,11 +15,13 @@ Reference Linear IDs in the body when useful (`CB-144`).
 
 ## Definition of done
 
-1. Prisma migration in `packages/db` if schema changed
+1. Prisma migration in `packages/db` if schema changed — **never `prisma db push`** (partial unique indexes on `Allotment` live only in SQL migrations and are dropped by push)
 2. NestJS endpoint with global auth ( `@AllowMember()` or `@RequirePermissions` ) + hostel scope
 3. Web UI wired via `apiFetch` / `useApiClient` with empty/loading/error states
 4. `pnpm lint` + `pnpm typecheck` + `pnpm test:integration` (when touching auth/tenancy/allotment)
 5. No secrets in the diff
+
+Architecture source of truth: [`docs/SOURCE-OF-TRUTH.md`](./docs/SOURCE-OF-TRUTH.md).
 
 ## Code rules
 
@@ -32,7 +34,7 @@ Reference Linear IDs in the body when useful (`CB-144`).
 | Mutations | NestJS REST — not Server Actions |
 | Money | Integer paise in schema when fee tables exist — no premature helpers |
 | Tenancy | Filter by `hostelId` on every query; no auto-join — invites or org bootstrap only |
-| Allotment | Partial unique indexes on active bed/resident; use `$transaction` in API |
+| Allotment | Partial unique indexes on active bed/resident; use `$transaction` in API. Cross-hostel `resident ↔ bed ↔ hostelId` enforced in service (`assertAllotmentTenancy`) — v1 has no DB CHECK across tables |
 | UI | One primary CTA per page header; reuse `components/ui` |
 | Abstractions | Wait for the second use before extracting |
 

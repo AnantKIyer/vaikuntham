@@ -1,7 +1,16 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
 import { Role } from "@vaikuntham/db";
 import {
   createMembershipInviteSchema,
+  updateMembershipRoleSchema,
   type SessionContext,
 } from "@vaikuntham/shared";
 import { AuthService } from "../auth/auth.service";
@@ -13,6 +22,12 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 @RequirePermissions("manageHostel")
 export class MembershipsController {
   constructor(private readonly auth: AuthService) {}
+
+  @Get()
+  async listMembers(@CurrentSession() session: SessionContext) {
+    const data = await this.auth.listMembers(session.hostelId);
+    return { ok: true, data };
+  }
 
   @Get("invites")
   async listInvites(@CurrentSession() session: SessionContext) {
@@ -31,6 +46,39 @@ export class MembershipsController {
       email: parsed.email,
       role: parsed.role,
     });
+    return { ok: true, data };
+  }
+
+  @Delete("invites/:id")
+  async revokeInvite(
+    @CurrentSession() session: SessionContext,
+    @Param("id") id: string,
+  ) {
+    const data = await this.auth.revokeInvite(session, id);
+    return { ok: true, data };
+  }
+
+  @Patch(":id")
+  async updateRole(
+    @CurrentSession() session: SessionContext,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateMembershipRoleSchema)) body: unknown,
+  ) {
+    const parsed = body as { role: Role };
+    const data = await this.auth.updateMembershipRole(
+      session,
+      id,
+      parsed.role,
+    );
+    return { ok: true, data };
+  }
+
+  @Delete(":id")
+  async revokeMember(
+    @CurrentSession() session: SessionContext,
+    @Param("id") id: string,
+  ) {
+    const data = await this.auth.revokeMembership(session, id);
     return { ok: true, data };
   }
 }

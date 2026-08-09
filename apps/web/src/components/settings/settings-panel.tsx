@@ -1,6 +1,5 @@
-import { DataTable } from "@/components/ui/data-table";
-import { EmptyState } from "@/components/ui/empty-state";
-import { StatusPill } from "@/components/ui/status-pill";
+import { InvitesPanel } from "@/components/settings/invites-panel";
+import { StaffMembershipsPanel } from "@/components/settings/staff-memberships-panel";
 import { apiFetch, redirectOnApiAuthFailure } from "@/lib/api/server";
 import {
   isAuthBypassMisconfigured,
@@ -11,15 +10,19 @@ import {
   API_ROUTES,
   ROLE_LABELS,
   type HostelSettingsDto,
+  type MembershipInviteDto,
   type PageWithSession,
 } from "@vaikuntham/shared";
 
 export async function SettingsPanel() {
-  const settingsResult = await apiFetch<PageWithSession<HostelSettingsDto>>(
-    API_ROUTES.settings,
-  );
+  const [settingsResult, invitesResult] = await Promise.all([
+    apiFetch<PageWithSession<HostelSettingsDto>>(API_ROUTES.settings),
+    apiFetch<MembershipInviteDto[]>(API_ROUTES.memberships.invites),
+  ]);
   redirectOnApiAuthFailure(settingsResult);
+  redirectOnApiAuthFailure(invitesResult);
   if (!settingsResult.ok) throw new Error(settingsResult.error);
+  if (!invitesResult.ok) throw new Error(invitesResult.error);
 
   const { session, hostel, members } = settingsResult.data;
   const bypassMismatch = isAuthBypassMisconfigured();
@@ -93,43 +96,15 @@ export async function SettingsPanel() {
         </div>
       </div>
 
-      <section className="mt-6">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-display text-lg text-(--color-ink)">
-            Staff memberships
-          </h2>
-          <StatusPill tone="neutral">{members.length}</StatusPill>
-        </div>
-        <DataTable
-          rows={members}
-          rowKey={(m) => m.id}
-          empty={
-            <EmptyState
-              title="No members yet"
-              body="The first user in your Clerk organization becomes admin. Invite additional staff by email from Settings once CB-156 ships."
-            />
-          }
-          columns={[
-            {
-              key: "user",
-              header: "Clerk user",
-              cell: (m) => (
-                <span className="font-mono text-xs">{m.clerkUserId}</span>
-              ),
-            },
-            {
-              key: "role",
-              header: "Role",
-              cell: (m) => ROLE_LABELS[m.role],
-            },
-            {
-              key: "joined",
-              header: "Joined",
-              cell: (m) => m.createdAt.slice(0, 10),
-            },
-          ]}
-        />
-      </section>
+      <StaffMembershipsPanel
+        members={members}
+        currentUserId={session.userId}
+      />
+
+      <InvitesPanel
+        invites={invitesResult.data}
+        clerkOrgId={hostel.clerkOrgId}
+      />
     </>
   );
 }

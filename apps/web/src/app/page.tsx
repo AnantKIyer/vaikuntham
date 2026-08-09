@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AuthSetupBanner } from "@/components/auth/auth-setup-banner";
 import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 
 export default function HomePage() {
@@ -9,6 +10,7 @@ export default function HomePage() {
 
   return (
     <div className="relative flex min-h-screen flex-col">
+      <AuthSetupBanner />
       <header className="flex items-center justify-between px-6 py-5 md:px-10">
         <p className="font-display text-2xl tracking-tight text-(--color-ink)">
           Vaikuntham

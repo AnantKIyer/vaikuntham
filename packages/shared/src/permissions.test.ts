@@ -15,9 +15,10 @@ function assert(condition: boolean, message: string) {
 assert(can(Role.ADMIN, "manageStructure"), "admin can manage structure");
 assert(can(Role.WARDEN, "manageStructure"), "warden can manage structure");
 assert(!can(Role.ACCOUNTANT, "manageStructure"), "accountant cannot manage structure");
+assert(can(Role.ACCOUNTANT, "viewStructure"), "accountant can view structure");
 assert(can(Role.ADMIN, "viewAudit"), "admin can view audit");
 assert(!can(Role.WARDEN, "viewAudit"), "warden cannot view audit");
-assert(Object.keys(PERMISSIONS).length >= 8, "permissions matrix populated");
+assert(Object.keys(PERMISSIONS).length >= 9, "permissions matrix populated");
 assert(ROLE_LABELS[Role.ADMIN] === "Admin", "role labels defined");
 
 if (failed > 0) {

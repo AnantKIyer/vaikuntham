@@ -121,7 +121,7 @@ See performance notes above for latency expectations (Web → API → DB).
 - **Tenancy:** every domain write scoped by `hostelId` + role guards
 - **Money:** integer paise in DB columns when fee/payment tables land — no money helpers until then
 
-See [docs/ADR-0002-service-split.md](./docs/ADR-0002-service-split.md).
+**Source of truth:** [docs/SOURCE-OF-TRUTH.md](./docs/SOURCE-OF-TRUTH.md) (HLD, entities, locking, roadmap). ADRs: [0001](./docs/ADR-0001-stack.md), [0002](./docs/ADR-0002-service-split.md).
 
 ## Coding standards
 

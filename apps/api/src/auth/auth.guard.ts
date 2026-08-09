@@ -34,7 +34,11 @@ export class AuthGuard implements CanActivate {
       headers: {
         authorization?: string;
         "x-test-user-id"?: string;
+        "x-auth-dev-bypass"?: string;
+        host?: string;
       };
+      ip?: string;
+      socket?: { remoteAddress?: string };
       session?: Awaited<ReturnType<AuthService["resolveSession"]>>;
     }>();
 
@@ -51,6 +55,11 @@ export class AuthGuard implements CanActivate {
       const session = await this.auth.resolveSession(
         request.headers.authorization,
         request.headers["x-test-user-id"],
+        {
+          bypassHeader: request.headers["x-auth-dev-bypass"],
+          host: request.headers.host,
+          remoteAddress: request.ip ?? request.socket?.remoteAddress,
+        },
       );
       request.session = session;
 

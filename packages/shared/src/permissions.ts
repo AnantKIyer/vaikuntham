@@ -12,6 +12,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const PERMISSIONS = {
   manageHostel: [Role.ADMIN],
   manageStructure: [Role.ADMIN, Role.WARDEN],
+  /** Read-only structure / occupancy (CB-160). */
+  viewStructure: [Role.ADMIN, Role.WARDEN, Role.ACCOUNTANT],
   manageResidents: [Role.ADMIN, Role.WARDEN],
   manageAllotment: [Role.ADMIN, Role.WARDEN],
   manageFeePlans: [Role.ADMIN, Role.ACCOUNTANT],

@@ -1,9 +1,15 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from "@nestjs/common";
 import { Prisma, Role } from "@vaikuntham/db";
 import { can, type Permission, type SessionContext } from "@vaikuntham/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import {
+  allowAuthDevBypass,
   AuthError,
   isAuthDevBypass,
   normalizeEmail,
@@ -13,18 +19,19 @@ type DbTx = Prisma.TransactionClient;
 
 const DEMO_SLUG = "demo-hostel";
 const DEV_USER_ID = "dev_user_admin";
-const SESSION_CACHE_MS = 60_000;
+/** Short TTL so role/membership changes converge quickly (CB-160). */
+const SESSION_CACHE_MS = 15_000;
+const SESSION_CACHE_MAX = 200;
 const INVITE_TTL_DAYS = 14;
+
+type SessionCacheEntry = { session: SessionContext; expiresAt: number };
 
 @Injectable()
 export class AuthService implements OnModuleInit {
   private devSession: SessionContext | null = null;
   private devSessionReady = false;
   private devSessionInflight: Promise<SessionContext> | null = null;
-  private readonly sessionCache = new Map<
-    string,
-    { session: SessionContext; expiresAt: number }
-  >();
+  private readonly sessionCache = new Map<string, SessionCacheEntry>();
   private readonly sessionInflight = new Map<
     string,
     Promise<SessionContext>
@@ -360,6 +367,8 @@ export class AuthService implements OnModuleInit {
       },
     });
 
+    this.invalidateSessionsForUser(input.clerkUserId);
+
     return this.toSession({
       userId: input.clerkUserId,
       hostelId: input.hostelId,
@@ -434,9 +443,148 @@ export class AuthService implements OnModuleInit {
     }));
   }
 
+  async listMembers(hostelId: string) {
+    const members = await this.prisma.membership.findMany({
+      where: { hostelId },
+      orderBy: { createdAt: "asc" },
+    });
+    return members.map((m) => ({
+      id: m.id,
+      clerkUserId: m.clerkUserId,
+      role: m.role,
+      createdAt: m.createdAt.toISOString(),
+    }));
+  }
+
+  async revokeInvite(session: SessionContext, inviteId: string) {
+    const result = await this.prisma.membershipInvite.deleteMany({
+      where: {
+        id: inviteId,
+        hostelId: session.hostelId,
+        acceptedAt: null,
+      },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException({ ok: false, error: "Invite not found" });
+    }
+
+    await this.audit.write({
+      actorId: session.userId,
+      action: "membership.invite_revoke",
+      entityType: "MembershipInvite",
+      entityId: inviteId,
+      hostelId: session.hostelId,
+    });
+
+    return { revoked: true };
+  }
+
+  async updateMembershipRole(
+    session: SessionContext,
+    membershipId: string,
+    role: Role,
+  ) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { id: membershipId, hostelId: session.hostelId },
+    });
+    if (!membership) {
+      throw new NotFoundException({ ok: false, error: "Membership not found" });
+    }
+
+    if (membership.role === Role.ADMIN && role !== Role.ADMIN) {
+      const adminCount = await this.prisma.membership.count({
+        where: { hostelId: session.hostelId, role: Role.ADMIN },
+      });
+      if (adminCount <= 1) {
+        throw new ConflictException({
+          ok: false,
+          error: "Cannot demote the last admin",
+          code: "LAST_ADMIN",
+        });
+      }
+    }
+
+    const updated = await this.prisma.membership.update({
+      where: { id: membershipId },
+      data: { role },
+    });
+
+    await this.audit.write({
+      actorId: session.userId,
+      action: "membership.role_change",
+      entityType: "Membership",
+      entityId: membershipId,
+      hostelId: session.hostelId,
+      metadata: {
+        clerkUserId: membership.clerkUserId,
+        fromRole: membership.role,
+        toRole: role,
+      },
+    });
+
+    this.invalidateSessionsForUser(membership.clerkUserId);
+
+    return {
+      id: updated.id,
+      clerkUserId: updated.clerkUserId,
+      role: updated.role,
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  async revokeMembership(session: SessionContext, membershipId: string) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { id: membershipId, hostelId: session.hostelId },
+    });
+    if (!membership) {
+      throw new NotFoundException({ ok: false, error: "Membership not found" });
+    }
+
+    if (membership.clerkUserId === session.userId) {
+      throw new ConflictException({
+        ok: false,
+        error: "Cannot revoke your own membership",
+        code: "SELF_REVOKE",
+      });
+    }
+
+    if (membership.role === Role.ADMIN) {
+      const adminCount = await this.prisma.membership.count({
+        where: { hostelId: session.hostelId, role: Role.ADMIN },
+      });
+      if (adminCount <= 1) {
+        throw new ConflictException({
+          ok: false,
+          error: "Cannot revoke the last admin",
+          code: "LAST_ADMIN",
+        });
+      }
+    }
+
+    await this.prisma.membership.delete({ where: { id: membershipId } });
+
+    await this.audit.write({
+      actorId: session.userId,
+      action: "membership.revoke",
+      entityType: "Membership",
+      entityId: membershipId,
+      hostelId: session.hostelId,
+      metadata: { clerkUserId: membership.clerkUserId, role: membership.role },
+    });
+
+    this.invalidateSessionsForUser(membership.clerkUserId);
+
+    return { revoked: true };
+  }
+
   async resolveSession(
     authHeader?: string,
     testUserId?: string,
+    requestMeta?: {
+      bypassHeader?: string;
+      host?: string;
+      remoteAddress?: string;
+    },
   ): Promise<SessionContext> {
     if (
       process.env.ALLOW_TEST_AUTH_HEADERS === "true" &&
@@ -445,7 +593,13 @@ export class AuthService implements OnModuleInit {
       return this.resolveTestSession(testUserId.trim());
     }
 
-    if (isAuthDevBypass()) {
+    if (
+      allowAuthDevBypass({
+        bypassHeader: requestMeta?.bypassHeader,
+        host: requestMeta?.host,
+        remoteAddress: requestMeta?.remoteAddress,
+      })
+    ) {
       return this.getDevSession();
     }
 
@@ -460,6 +614,9 @@ export class AuthService implements OnModuleInit {
 
     const cached = this.sessionCache.get(token);
     if (cached && cached.expiresAt > Date.now()) {
+      // Refresh insertion order for LRU.
+      this.sessionCache.delete(token);
+      this.sessionCache.set(token, cached);
       return cached.session;
     }
 
@@ -471,6 +628,30 @@ export class AuthService implements OnModuleInit {
       this.sessionInflight.set(token, inflight);
     }
     return inflight;
+  }
+
+  /** Drop cached sessions for a Clerk user after membership/role changes (CB-160). */
+  invalidateSessionsForUser(clerkUserId: string) {
+    for (const [token, entry] of this.sessionCache) {
+      if (entry.session.userId === clerkUserId) {
+        this.sessionCache.delete(token);
+      }
+    }
+  }
+
+  private putSessionCache(token: string, session: SessionContext) {
+    if (this.sessionCache.has(token)) {
+      this.sessionCache.delete(token);
+    }
+    this.sessionCache.set(token, {
+      session,
+      expiresAt: Date.now() + SESSION_CACHE_MS,
+    });
+    while (this.sessionCache.size > SESSION_CACHE_MAX) {
+      const oldest = this.sessionCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.sessionCache.delete(oldest);
+    }
   }
 
   private async resolveSessionForToken(token: string): Promise<SessionContext> {
@@ -502,11 +683,7 @@ export class AuthService implements OnModuleInit {
       fullName,
     });
 
-    this.sessionCache.set(token, {
-      session,
-      expiresAt: Date.now() + SESSION_CACHE_MS,
-    });
-
+    this.putSessionCache(token, session);
     return session;
   }
 

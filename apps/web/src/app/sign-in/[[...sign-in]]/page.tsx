@@ -11,8 +11,14 @@ export default function SignInPage() {
   if (!isClerkConfigured()) {
     return (
       <SetupAuth
-        title="Sign in"
-        message="Add Clerk keys to .env, or set AUTH_DEV_BYPASS=true and NEXT_PUBLIC_AUTH_DEV_BYPASS=true for local UI without Clerk."
+        title="Set up Clerk sign-in"
+        steps={[
+          "Open dashboard.clerk.com → your app → API Keys.",
+          "Copy Publishable key (pk_test_…) and Secret key (sk_test_…).",
+          "Add to root .env: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY.",
+          "Ensure AUTH_DEV_BYPASS=false and NEXT_PUBLIC_AUTH_DEV_BYPASS=false.",
+          "Restart npm run dev:fast, then reload this page.",
+        ]}
       />
     );
   }
@@ -24,14 +30,22 @@ export default function SignInPage() {
   );
 }
 
-function SetupAuth({ title, message }: { title: string; message: string }) {
+function SetupAuth({
+  title,
+  steps,
+}: {
+  title: string;
+  steps: string[];
+}) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="max-w-md rounded-lg border border-(--color-border) bg-(--color-paper) p-6 text-center">
-        <h1 className="font-display text-2xl text-(--color-ink)">
-          {title}
-        </h1>
-        <p className="mt-3 text-sm text-(--color-muted)">{message}</p>
+      <div className="max-w-md rounded-lg border border-(--color-border) bg-(--color-paper) p-6">
+        <h1 className="font-display text-2xl text-(--color-ink)">{title}</h1>
+        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-(--color-ink-soft)">
+          {steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
         <Link
           href="/"
           className="mt-6 inline-block text-sm font-medium text-(--color-accent) underline-offset-2 hover:underline"

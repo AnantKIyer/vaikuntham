@@ -53,6 +53,4 @@ describe("allotment constraints (integration)", () => {
     ).rejects.toThrow();
   });
 
-  // Race-condition coverage lands with the allotment API ($transaction + retry).
-  it.todo("rejects concurrent ACTIVE allotments on the same bed (allotment API)");
 });

@@ -3,5 +3,7 @@ export * from "./enums";
 export * from "./memberships";
 export * from "./hostels";
 export * from "./structure";
+export * from "./residents";
+export * from "./allotment";
 export * from "./api-routes";
 export * from "./types";

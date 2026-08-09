@@ -9,12 +9,14 @@ import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 /** One Clerk token lookup per RSC request (dedupes parallel apiFetch calls). */
 const getApiAuthHeaders = cache(async (): Promise<HeadersInit> => {
   const headers: Record<string, string> = {};
-  if (!isAuthDevBypass()) {
-    const session = await auth();
-    const token = await session.getToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+  if (isAuthDevBypass()) {
+    headers["x-auth-dev-bypass"] = "true";
+    return headers;
+  }
+  const session = await auth();
+  const token = await session.getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
   return headers;
 });

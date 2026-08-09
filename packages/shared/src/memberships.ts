@@ -18,3 +18,18 @@ export type MembershipInviteDto = {
   createdAt?: string;
   acceptedAt?: string | null;
 };
+
+export const updateMembershipRoleSchema = z.object({
+  role: z.enum([Role.ADMIN, Role.WARDEN, Role.ACCOUNTANT]),
+});
+
+export type UpdateMembershipRoleInput = z.infer<
+  typeof updateMembershipRoleSchema
+>;
+
+export type MembershipDto = {
+  id: string;
+  clerkUserId: string;
+  role: Role;
+  createdAt: string;
+};

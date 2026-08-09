@@ -2,6 +2,7 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { ApiClientProvider } from "@/lib/api/client";
+import { isAuthDevBypass } from "@/lib/utils";
 
 function getPublishableKey(): string | null {
   const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
@@ -10,13 +11,9 @@ function getPublishableKey(): string | null {
   return key;
 }
 
-function isClientAuthBypass(): boolean {
-  return process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";
-}
-
 export function Providers({ children }: { children: React.ReactNode }) {
   const publishableKey = getPublishableKey();
-  const bypass = isClientAuthBypass();
+  const bypass = isAuthDevBypass();
 
   const tree = <ApiClientProvider>{children}</ApiClientProvider>;
 

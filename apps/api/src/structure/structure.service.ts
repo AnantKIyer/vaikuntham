@@ -13,6 +13,7 @@ import type {
   CreateBlockInput,
   CreateFloorInput,
   CreateRoomsBulkInput,
+  OccupancyBoardDto,
   RenameBedInput,
   RenameBlockInput,
   RenameFloorInput,
@@ -122,6 +123,117 @@ export class StructureService {
       blocks,
       beds: bedsList.beds,
       totalBeds: bedsList.totalBeds,
+    };
+  }
+
+  async getOccupancyBoard(hostelId: string): Promise<OccupancyBoardDto> {
+    const blocks = await this.prisma.block.findMany({
+      where: { hostelId },
+      orderBy: { name: "asc" },
+      include: {
+        floors: {
+          orderBy: { level: "asc" },
+          include: {
+            rooms: {
+              orderBy: { number: "asc" },
+              include: {
+                beds: {
+                  orderBy: { label: "asc" },
+                  include: {
+                    allotments: {
+                      where: { status: "ACTIVE" },
+                      take: 1,
+                      include: { resident: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let totalBeds = 0;
+    let occupiedBeds = 0;
+
+    const boardBlocks = blocks.map((block) => {
+      let blockTotal = 0;
+      let blockOccupied = 0;
+
+      const floors = block.floors.map((floor) => {
+        const beds = floor.rooms.flatMap((room) =>
+          room.beds.map((bed) => {
+            const active = bed.allotments[0];
+            const isOccupied = bed.status === BedStatus.OCCUPIED;
+            return {
+              id: bed.id,
+              label: bed.label,
+              status: bed.status,
+              roomNumber: room.number,
+              floorId: floor.id,
+              floorName: floor.name,
+              blockId: block.id,
+              blockName: block.name,
+              resident: active
+                ? {
+                    id: active.resident.id,
+                    fullName: active.resident.fullName,
+                  }
+                : null,
+              _occupied: isOccupied,
+            };
+          }),
+        );
+
+        const floorTotal = beds.length;
+        const floorOccupied = beds.filter((b) => b._occupied).length;
+        blockTotal += floorTotal;
+        blockOccupied += floorOccupied;
+
+        return {
+          id: floor.id,
+          name: floor.name,
+          level: floor.level,
+          totalBeds: floorTotal,
+          occupiedBeds: floorOccupied,
+          vacantBeds: beds.filter((b) => b.status === BedStatus.VACANT).length,
+          occupancyPercent:
+            floorTotal === 0
+              ? 0
+              : Math.round((floorOccupied / floorTotal) * 100),
+          beds: beds.map(({ _occupied: _, ...rest }) => rest),
+        };
+      });
+
+      totalBeds += blockTotal;
+      occupiedBeds += blockOccupied;
+      const blockVacant = floors.reduce((n, f) => n + f.vacantBeds, 0);
+
+      return {
+        id: block.id,
+        name: block.name,
+        code: block.code,
+        totalBeds: blockTotal,
+        occupiedBeds: blockOccupied,
+        vacantBeds: blockVacant,
+        occupancyPercent:
+          blockTotal === 0
+            ? 0
+            : Math.round((blockOccupied / blockTotal) * 100),
+        floors,
+      };
+    });
+
+    const vacantBeds = boardBlocks.reduce((n, b) => n + b.vacantBeds, 0);
+
+    return {
+      totalBeds,
+      occupiedBeds,
+      vacantBeds,
+      occupancyPercent:
+        totalBeds === 0 ? 0 : Math.round((occupiedBeds / totalBeds) * 100),
+      blocks: boardBlocks,
     };
   }
 

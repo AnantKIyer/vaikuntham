@@ -2,6 +2,10 @@ import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { AppModule } from "../../src/app.module";
+import {
+  allowAuthDevBypass,
+  isAuthDevBypass,
+} from "../../src/auth/auth.utils";
 
 describe("authz (integration)", () => {
   let app: INestApplication;
@@ -42,9 +46,11 @@ describe("authz (integration)", () => {
 describe("authz with dev bypass (integration)", () => {
   let app: INestApplication;
   const prevBypass = process.env.AUTH_DEV_BYPASS;
+  const prevNodeEnv = process.env.NODE_ENV;
 
   beforeAll(async () => {
     process.env.AUTH_DEV_BYPASS = "true";
+    process.env.NODE_ENV = "development";
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -54,7 +60,25 @@ describe("authz with dev bypass (integration)", () => {
 
   afterAll(async () => {
     process.env.AUTH_DEV_BYPASS = prevBypass;
+    process.env.NODE_ENV = prevNodeEnv;
     await app.close();
+  });
+
+  it("allowAuthDevBypass requires header or localhost (CB-160)", () => {
+    expect(isAuthDevBypass()).toBe(true);
+    expect(
+      allowAuthDevBypass({
+        host: "api.example.com",
+        remoteAddress: "203.0.113.10",
+      }),
+    ).toBe(false);
+    expect(
+      allowAuthDevBypass({
+        bypassHeader: "true",
+        host: "api.example.com",
+        remoteAddress: "203.0.113.10",
+      }),
+    ).toBe(true);
   });
 
   it("GET /v1/session returns dev admin session", async () => {

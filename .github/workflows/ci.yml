@@ -41,11 +41,11 @@ jobs:
       - run: pnpm test:permissions
       - run: pnpm test:integration
         env:
-          AUTH_DEV_BYPASS: "true"
+          AUTH_DEV_BYPASS: "false"
       - run: pnpm db:validate
       - run: pnpm build
         env:
-          AUTH_DEV_BYPASS: "true"
-          NEXT_PUBLIC_AUTH_DEV_BYPASS: "true"
+          AUTH_DEV_BYPASS: "false"
+          NEXT_PUBLIC_AUTH_DEV_BYPASS: "false"
           NEXT_PUBLIC_API_URL: http://localhost:3001
           API_URL: http://localhost:3001

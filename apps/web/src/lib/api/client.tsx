@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ApiResult } from "@vaikuntham/shared";
+import { isAuthDevBypass } from "@/lib/utils";
 import { getPublicApiUrl } from "./config";
 
 export type ApiClientFn = <T>(
@@ -30,6 +31,8 @@ async function fetchApi<T>(
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
+  } else if (isAuthDevBypass()) {
+    headers.set("x-auth-dev-bypass", "true");
   }
 
   const res = await fetch(`${getPublicApiUrl()}${path}`, {
@@ -76,7 +79,7 @@ function ClerkApiClientProvider({ children }: { children: ReactNode }) {
 }
 
 export function ApiClientProvider({ children }: { children: ReactNode }) {
-  const bypass = process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";
+  const bypass = isAuthDevBypass();
   const hasPk = Boolean(
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_"),
   );

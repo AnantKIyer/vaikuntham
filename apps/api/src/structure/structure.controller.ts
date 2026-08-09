@@ -30,11 +30,11 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { StructureService } from "./structure.service";
 
 @Controller("v1/structure")
-@RequirePermissions("manageStructure")
 export class StructureController {
   constructor(private readonly structure: StructureService) {}
 
   @Get("board")
+  @RequirePermissions("viewStructure")
   async getBoard(
     @CurrentSession() session: SessionContext,
     @Query("status") status?: string,
@@ -55,13 +55,22 @@ export class StructureController {
     };
   }
 
+  @Get("occupancy")
+  @RequirePermissions("viewStructure")
+  async getOccupancy(@CurrentSession() session: SessionContext) {
+    const data = await this.structure.getOccupancyBoard(session.hostelId);
+    return { ok: true, data };
+  }
+
   @Get("blocks")
+  @RequirePermissions("viewStructure")
   async listBlocks(@CurrentSession() session: SessionContext) {
     const data = await this.structure.listBlocks(session.hostelId);
     return { ok: true, data };
   }
 
   @Get("beds")
+  @RequirePermissions("viewStructure")
   async listBeds(
     @CurrentSession() session: SessionContext,
     @Query("status") status?: string,
@@ -80,6 +89,7 @@ export class StructureController {
   }
 
   @Post("blocks")
+  @RequirePermissions("manageStructure")
   async createBlock(
     @CurrentSession() session: SessionContext,
     @Body(new ZodValidationPipe(createBlockSchema)) body: unknown,
@@ -92,6 +102,7 @@ export class StructureController {
   }
 
   @Post("floors")
+  @RequirePermissions("manageStructure")
   async createFloor(
     @CurrentSession() session: SessionContext,
     @Body(new ZodValidationPipe(createFloorSchema)) body: unknown,
@@ -104,6 +115,7 @@ export class StructureController {
   }
 
   @Post("rooms/bulk")
+  @RequirePermissions("manageStructure")
   async createRoomsBulk(
     @CurrentSession() session: SessionContext,
     @Body(new ZodValidationPipe(createRoomsBulkSchema)) body: unknown,
@@ -116,6 +128,7 @@ export class StructureController {
   }
 
   @Post("beds/delete")
+  @RequirePermissions("manageStructure")
   async deleteBedsBulk(
     @CurrentSession() session: SessionContext,
     @Body(new ZodValidationPipe(bulkDeleteBedsSchema)) body: unknown,
@@ -128,6 +141,7 @@ export class StructureController {
   }
 
   @Post("beds/rename")
+  @RequirePermissions("manageStructure")
   async renameBedsBulk(
     @CurrentSession() session: SessionContext,
     @Body(new ZodValidationPipe(bulkRenameBedsSchema)) body: unknown,
@@ -140,6 +154,7 @@ export class StructureController {
   }
 
   @Patch("beds/:bedId/status")
+  @RequirePermissions("manageStructure")
   async setBedStatus(
     @CurrentSession() session: SessionContext,
     @Param("bedId") bedId: string,
@@ -154,6 +169,7 @@ export class StructureController {
   }
 
   @Delete("beds/:bedId")
+  @RequirePermissions("manageStructure")
   async deleteBed(
     @CurrentSession() session: SessionContext,
     @Param("bedId") bedId: string,
@@ -163,6 +179,7 @@ export class StructureController {
   }
 
   @Patch("beds/:bedId")
+  @RequirePermissions("manageStructure")
   async renameBed(
     @CurrentSession() session: SessionContext,
     @Param("bedId") bedId: string,
@@ -177,6 +194,7 @@ export class StructureController {
   }
 
   @Patch("rooms/:roomId")
+  @RequirePermissions("manageStructure")
   async renameRoom(
     @CurrentSession() session: SessionContext,
     @Param("roomId") roomId: string,
@@ -191,6 +209,7 @@ export class StructureController {
   }
 
   @Patch("floors/:floorId")
+  @RequirePermissions("manageStructure")
   async renameFloor(
     @CurrentSession() session: SessionContext,
     @Param("floorId") floorId: string,
@@ -205,6 +224,7 @@ export class StructureController {
   }
 
   @Patch("blocks/:blockId")
+  @RequirePermissions("manageStructure")
   async renameBlock(
     @CurrentSession() session: SessionContext,
     @Param("blockId") blockId: string,

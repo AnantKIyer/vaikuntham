@@ -22,3 +22,25 @@ export const BED_STATUS_VALUES = [
   BedStatus.BLOCKED,
   BedStatus.MAINTENANCE,
 ] as const;
+
+export const ResidentStatus = {
+  APPLICANT: "APPLICANT",
+  ACTIVE: "ACTIVE",
+  VACATED: "VACATED",
+} as const;
+
+export type ResidentStatus = (typeof ResidentStatus)[keyof typeof ResidentStatus];
+
+export const RESIDENT_STATUS_VALUES = [
+  ResidentStatus.APPLICANT,
+  ResidentStatus.ACTIVE,
+  ResidentStatus.VACATED,
+] as const;
+
+export const AllotmentStatus = {
+  ACTIVE: "ACTIVE",
+  ENDED: "ENDED",
+} as const;
+
+export type AllotmentStatus =
+  (typeof AllotmentStatus)[keyof typeof AllotmentStatus];

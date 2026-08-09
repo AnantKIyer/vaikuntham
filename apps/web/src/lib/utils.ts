@@ -16,8 +16,15 @@ export function isClerkConfigured() {
   );
 }
 
+/**
+ * Client + server bypass gate (CB-160). Production always false.
+ * Server requires both flags; browser only sees NEXT_PUBLIC_*.
+ */
 export function isAuthDevBypass() {
   if (process.env.NODE_ENV === "production") return false;
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";
+  }
   return (
     process.env.AUTH_DEV_BYPASS === "true" &&
     process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true"
@@ -26,6 +33,7 @@ export function isAuthDevBypass() {
 
 export function isAuthBypassMisconfigured() {
   if (process.env.NODE_ENV === "production") return false;
+  if (typeof window !== "undefined") return false;
   const server = process.env.AUTH_DEV_BYPASS === "true";
   const client = process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";
   return server !== client;
