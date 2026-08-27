@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   API_ROUTES,
   createResidentSchema,
@@ -33,10 +33,12 @@ export function ResidentsPanel({
   initial,
   initialQ,
   initialStatus,
+  focusResident = null,
 }: {
   initial: ResidentsListDto;
   initialQ: string;
   initialStatus: string;
+  focusResident?: ResidentDto | null;
 }) {
   const router = useRouter();
   const api = useApiClient();
@@ -46,6 +48,25 @@ export function ResidentsPanel({
   const [showForm, setShowForm] = useState(false);
   const [historyFor, setHistoryFor] = useState<ResidentDto | null>(null);
   const [history, setHistory] = useState<AllotmentDto[] | null>(null);
+
+  useEffect(() => {
+    if (!focusResident) return;
+    let cancelled = false;
+    start(async () => {
+      const res = await api<AllotmentsListDto>(
+        API_ROUTES.residents.history(focusResident.id),
+      );
+      if (cancelled) return;
+      if (!res.ok && handleAuthFailure(res)) return;
+      if (res.ok) {
+        setHistoryFor(focusResident);
+        setHistory(res.data.allotments);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, focusResident, handleAuthFailure]);
 
   const columns = useMemo<DataTableColumn<ResidentDto>[]>(
     () => [

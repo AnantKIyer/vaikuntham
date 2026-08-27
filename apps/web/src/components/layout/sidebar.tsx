@@ -98,7 +98,7 @@ export function Sidebar({
               {clerkSession ? "Signed in" : "Dev bypass"}
             </p>
           </div>
-          {clerkSession ? <UserButton afterSignOutUrl="/" /> : null}
+          {clerkSession ? <UserButton /> : null}
         </div>
         <div className="mt-2">
           {clerkSession ? <ClerkSignOutButton /> : <BypassExitButton />}

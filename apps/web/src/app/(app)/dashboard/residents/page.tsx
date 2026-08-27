@@ -1,6 +1,7 @@
 import {
   API_ROUTES,
   RESIDENT_STATUS_VALUES,
+  type ResidentDto,
   type ResidentsListDto,
 } from "@vaikuntham/shared";
 import { DashboardShell, requirePagePermission } from "@/components/layout/dashboard-shell";
@@ -12,10 +13,11 @@ export const metadata = { title: "Residents" };
 export default async function ResidentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; id?: string }>;
 }) {
   const session = await requirePagePermission("manageResidents");
   const params = await searchParams;
+  const focusId = params.id?.trim() ?? "";
   const q = params.q?.trim() ?? "";
   const statusRaw = params.status?.trim() ?? "ALL";
   const status =
@@ -37,6 +39,17 @@ export default async function ResidentsPage({
     throw new Error(result.error);
   }
 
+  let focusResident: ResidentDto | null = null;
+  if (focusId) {
+    const focusResult = await apiFetch<ResidentDto>(
+      API_ROUTES.residents.one(focusId),
+    );
+    redirectOnApiAuthFailure(focusResult);
+    if (focusResult.ok) {
+      focusResident = focusResult.data;
+    }
+  }
+
   return (
     <DashboardShell
       session={session}
@@ -51,6 +64,7 @@ export default async function ResidentsPage({
         initial={result.data}
         initialQ={q}
         initialStatus={status}
+        focusResident={focusResident}
       />
     </DashboardShell>
   );

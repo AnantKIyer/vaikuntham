@@ -22,7 +22,7 @@ function bedTone(status: string): StatusTone {
 function BedChip({ bed }: { bed: OccupancyBedDto }) {
   const label = `${bed.roomNumber}-${bed.label}`;
   const href = bed.resident
-    ? `/dashboard/residents?q=${encodeURIComponent(bed.resident.fullName)}`
+    ? `/dashboard/residents?id=${encodeURIComponent(bed.resident.id)}`
     : bed.status === BedStatus.VACANT
       ? "/dashboard/allotment"
       : "/dashboard/rooms";

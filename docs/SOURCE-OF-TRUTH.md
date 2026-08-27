@@ -399,12 +399,12 @@ Prefix: `/v1`. Routes constant: `packages/shared/src/api-routes.ts`.
 | `AuthModule` | JWT, session resolve, provisioning, permissions |
 | `HostelsModule` | Bootstrap create + link org |
 | `MembershipsModule` | Invites + role change + revoke |
-| `StructureModule` | Physical inventory |
-| `AllotmentModule` | Assign/end integrity (REST pending) |
+| `StructureModule` | Physical inventory + occupancy board |
+| `ResidentsModule` | Profiles, search, history |
+| `AllotmentModule` | Assign, end, transfer, vacate (txn + bed lock) |
 | `AuditModule` | Query + write helper |
 | `DashboardModule` | Occupancy stats |
 | `SettingsModule` | Hostel settings DTO |
-| *(future)* `ResidentsModule` | Profiles |
 | *(future)* `FeesModule` | Plans, invoices, payments |
 
 Web mirrors with route segments under `apps/web/src/app/(app)/dashboard/*` and shared UI in `components/ui/*`.
@@ -437,9 +437,6 @@ Related platform epic **CB-144** children (145–149) are Done — epic closable
 
 | Issue | Milestone / wave | Notes |
 | --- | --- | --- |
-| CB-113 / 127 / 128 / 168 | W2 Core Ops | Structure product |
-| CB-129–131 / 114 / 115 | W2 | Residents + allotment |
-| CB-150 children leftover | Hardening Wave 2 | CB-156 invites UI, CB-157/159 finish |
 | CB-162+ | Performance | Parallel track |
 
 ### W1 exit checklist
@@ -455,24 +452,65 @@ Related platform epic **CB-144** children (145–149) are Done — epic closable
 
 ---
 
+## 10b. Milestone status — W2 Core Ops
+
+Milestone: **W2 Core Ops (Aug 13–19)** · structure, residents, allotment, occupancy.
+
+### Shipped (Linear Done; merge `feat/w2-core-ops-and-access-model` → `development`)
+
+| Issue | Title | Evidence |
+| --- | --- | --- |
+| CB-113 | Epic: Structure | Blocks → beds CRUD + board |
+| CB-127 | Structure CRUD | `StructureModule`, `/dashboard/rooms` |
+| CB-168 | Hard delete + rename | `structure-mutations.integration.spec.ts` |
+| CB-128 | Occupancy board | `GET /v1/structure/occupancy`, `/dashboard/occupancy` |
+| CB-115 | Epic: Residents | Profiles linked to allotments |
+| CB-129 | Resident CRUD | `ResidentsModule`, `/dashboard/residents` |
+| CB-114 | Epic: Allotment | Assign / transfer / vacate |
+| CB-131 | Assign to bed | `POST /v1/allotments`, concurrent test |
+| CB-130 | Transfer + vacate | Single txn, history API |
+| CB-155 | Allotment integrity | Cross-hostel guard, bed status sync |
+
+Related hardening (same branch): CB-156 invites UI, CB-160 authz, membership lifecycle.
+
+### W2 exit checklist
+
+- [x] Structure CRUD + rename/delete (CB-127, CB-168)
+- [x] Occupancy board with bed → resident link (CB-128)
+- [x] Residents REST + search UI (CB-129)
+- [x] Allotment assign/end/transfer/vacate (CB-131, CB-130)
+- [x] Allotment integrity + integration tests (CB-155)
+- [x] Role-gated nav (warden vs admin)
+- [ ] Merged to `development` and QA smoke with Clerk bypass off
+
+### Deferred (not W2)
+
+| Item | Notes |
+| --- | --- |
+| Document upload stub (CB-129) | Post-demo |
+| Demo seed (CB-135) | W4 |
+| Billing (CB-133, CB-141, CB-132) | W3 |
+
+---
+
 ## 11. Implementation plan — remaining work
 
-Ordered for demo risk. Do not start allotment UI before Wave 2 exit items below are green.
+Ordered for demo risk. **W2 (Phase B) is shipped** on branch; next is W3 billing.
 
-### Phase A — Close hardening leftovers (1–2 days)
+### Phase A — Close hardening leftovers *(Done)*
 
 | Seq | Issue | Work |
 | --- | --- | --- |
-| A1 | CB-157 | Docs: `db push` ban + `DIRECT_URL` guidance *(this PR)* |
-| A2 | CB-159 | Confirm OCCUPIED schema / middleware / Settings copy *(shipped; mark Done)* |
+| A1 | CB-157 | Docs: `db push` ban + `DIRECT_URL` guidance |
+| A2 | CB-159 | OCCUPIED schema / middleware / Settings copy |
 | A3 | CB-156 | Settings UI: create invite, list pending, show org link status |
-| A4 | Linear hygiene | Mark W1 In Review → Done; close CB-144 / CB-111 / CB-112 / CB-110 |
+| A4 | Linear hygiene | W1 + CB-144 closed |
 
-### Phase B — Residents + Allotment API (W2 core)
+### Phase B — Residents + Allotment API *(Done)*
 
 | Seq | Issue | Work |
 | --- | --- | --- |
-| B1 | CB-155 | Integrity service *(implemented; commit/PR)* |
+| B1 | CB-155 | Integrity service |
 | B2 | CB-129 | ResidentsModule REST + list/search UI |
 | B3 | CB-131 | `POST /v1/allotments`, `POST …/:id/end`; bed `FOR UPDATE`; concurrent test |
 | B4 | CB-131 UI | Assign wizard: pick resident → vacant bed → confirm |
