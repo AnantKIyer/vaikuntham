@@ -11,23 +11,23 @@ if (existsSync(rootEnv)) {
 export const prisma = new PrismaClient();
 
 export async function resetDatabase() {
-  await prisma.$transaction([
-    prisma.auditLog.deleteMany(),
-    prisma.payment.deleteMany(),
-    prisma.invoiceLine.deleteMany(),
-    prisma.invoice.deleteMany(),
-    prisma.feePlanLine.deleteMany(),
-    prisma.feePlan.deleteMany(),
-    prisma.allotment.deleteMany(),
-    prisma.bed.deleteMany(),
-    prisma.room.deleteMany(),
-    prisma.floor.deleteMany(),
-    prisma.block.deleteMany(),
-    prisma.resident.deleteMany(),
-    prisma.membershipInvite.deleteMany(),
-    prisma.membership.deleteMany(),
-    prisma.hostel.deleteMany(),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.deleteMany();
+    await tx.payment.deleteMany();
+    await tx.invoiceLine.deleteMany();
+    await tx.invoice.deleteMany();
+    await tx.feePlanLine.deleteMany();
+    await tx.feePlan.deleteMany();
+    await tx.allotment.deleteMany();
+    await tx.bed.deleteMany();
+    await tx.room.deleteMany();
+    await tx.floor.deleteMany();
+    await tx.block.deleteMany();
+    await tx.resident.deleteMany();
+    await tx.membershipInvite.deleteMany();
+    await tx.membership.deleteMany();
+    await tx.hostel.deleteMany();
+  });
 }
 
 export async function seedTwoHostels() {
