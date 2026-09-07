@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { AuthSetupBanner } from "@/components/auth/auth-setup-banner";
 import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 
@@ -17,20 +17,18 @@ export default function HomePage() {
         </p>
         <div className="flex items-center gap-2">
           {clerkReady && !bypass ? (
-            <Link href="/sign-in">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
+            <ButtonLink href="/sign-in" variant="ghost" size="sm">
+              Sign in
+            </ButtonLink>
           ) : null}
           {canEnterApp ? (
-            <Link href="/dashboard">
-              <Button size="sm">Open app</Button>
-            </Link>
+            <ButtonLink href="/dashboard" size="sm">
+              Open app
+            </ButtonLink>
           ) : (
-            <Link href="/sign-in">
-              <Button size="sm">Set up auth</Button>
-            </Link>
+            <ButtonLink href="/sign-in" size="sm">
+              Set up auth
+            </ButtonLink>
           )}
         </div>
       </header>
@@ -46,20 +44,22 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             {canEnterApp ? (
-              <Link href="/dashboard">
-                <Button size="lg">Enter dashboard</Button>
-              </Link>
+              <ButtonLink href="/dashboard" size="lg">
+                Enter dashboard
+              </ButtonLink>
             ) : null}
             {clerkReady && !bypass ? (
-              <Link href="/sign-in">
-                <Button size="lg" variant={canEnterApp ? "secondary" : "primary"}>
-                  Staff sign in
-                </Button>
-              </Link>
+              <ButtonLink
+                href="/sign-in"
+                size="lg"
+                variant={canEnterApp ? "secondary" : "primary"}
+              >
+                Staff sign in
+              </ButtonLink>
             ) : !canEnterApp ? (
-              <Link href="/sign-in">
-                <Button size="lg">Configure auth</Button>
-              </Link>
+              <ButtonLink href="/sign-in" size="lg">
+                Configure auth
+              </ButtonLink>
             ) : null}
           </div>
           <p className="mt-10 text-sm text-(--color-muted)">

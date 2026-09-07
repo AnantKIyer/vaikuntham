@@ -1,7 +1,9 @@
 import { Test } from "@nestjs/testing";
 import { BedStatus, Role } from "@vaikuntham/db";
 import type { SessionContext } from "@vaikuntham/shared";
+import { AllotmentModule } from "../../src/allotment/allotment.module";
 import { AllotmentService } from "../../src/allotment/allotment.service";
+import { AuditModule } from "../../src/audit/audit.module";
 import { PrismaModule } from "../../src/prisma/prisma.module";
 import { prisma, resetDatabase, seedAllotmentFixture } from "./helpers";
 
@@ -19,8 +21,7 @@ describe("allotment transfer/vacate (integration)", () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [PrismaModule],
-      providers: [AllotmentService],
+      imports: [PrismaModule, AuditModule, AllotmentModule],
     }).compile();
     allotment = moduleRef.get(AllotmentService);
   });

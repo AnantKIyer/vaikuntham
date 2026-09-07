@@ -481,59 +481,38 @@ Related hardening (same branch): CB-156 invites UI, CB-160 authz, membership lif
 - [x] Allotment assign/end/transfer/vacate (CB-131, CB-130)
 - [x] Allotment integrity + integration tests (CB-155)
 - [x] Role-gated nav (warden vs admin)
-- [ ] Merged to `development` and QA smoke with Clerk bypass off
+- [ ] Merged to `development` and QA smoke with Clerk bypass off (PR pending)
+
+### W3 billing — shipped on branch (uncommitted → PR)
+
+| Issue | Title | Evidence |
+| --- | --- | --- |
+| CB-133 | Fee plans + invoices | `FeesModule`, `/dashboard/fees`, deposit lines, detail + void UI |
+| CB-141 | Payments + dues + receipt | `PaymentsModule`, SQL dues, `/dashboard/fees/receipts/[id]` |
+| CB-132 | Collections dashboard | KPI strip + activity feed on `/dashboard` |
 
 ### Deferred (not W2)
 
 | Item | Notes |
 | --- | --- |
 | Document upload stub (CB-129) | Post-demo |
-| Demo seed (CB-135) | W4 |
-| Billing (CB-133, CB-141, CB-132) | W3 |
+| Demo reset UI (CB-135) | W4 — seed script seeds billing; admin reset deferred |
+| Billing (CB-133, CB-141, CB-132) | **Done on branch** — merge with W2 PR |
 
 ---
 
 ## 11. Implementation plan — remaining work
 
-Ordered for demo risk. **W2 (Phase B) is shipped** on branch; next is W3 billing.
+Ordered for demo risk. **W2 (Phase B) is shipped** on branch; **W3 billing is implemented** on the same branch pending PR.
 
-### Phase A — Close hardening leftovers *(Done)*
-
-| Seq | Issue | Work |
-| --- | --- | --- |
-| A1 | CB-157 | Docs: `db push` ban + `DIRECT_URL` guidance |
-| A2 | CB-159 | OCCUPIED schema / middleware / Settings copy |
-| A3 | CB-156 | Settings UI: create invite, list pending, show org link status |
-| A4 | Linear hygiene | W1 + CB-144 closed |
-
-### Phase B — Residents + Allotment API *(Done)*
-
-| Seq | Issue | Work |
-| --- | --- | --- |
-| B1 | CB-155 | Integrity service |
-| B2 | CB-129 | ResidentsModule REST + list/search UI |
-| B3 | CB-131 | `POST /v1/allotments`, `POST …/:id/end`; bed `FOR UPDATE`; concurrent test |
-| B4 | CB-131 UI | Assign wizard: pick resident → vacant bed → confirm |
-| B5 | CB-130 | Transfer/vacate single txn + history |
-| B6 | CB-128 | Occupancy board (floor/list) using board API |
-
-**DB locking for B3 (detail):**
-
-1. Begin interactive txn.
-2. `findFirst` resident scoped; throw 404.
-3. `findFirst` bed scoped; `FOR UPDATE` via `$queryRaw` or Prisma `FOR UPDATE` extension.
-4. Re-read status; `assertAllotmentTenancy`.
-5. Insert allotment; update bed; audit.
-6. Commit; map unique violation → 409.
-
-### Phase C — Billing (W3)
+### Phase C — Billing (W3) *(Done on branch)*
 
 | Seq | Issue | Work |
 | --- | --- | --- |
 | C1 | Schema migration | `FeePlan`, `Invoice`, `Payment` + paise columns |
 | C2 | CB-133 | Fee plans + generate invoice for period |
-| C3 | CB-141 | Record payment + dues list |
-| C4 | CB-132 | Occupancy + collections dashboard |
+| C3 | CB-141 | Record payment + dues list + printable receipt |
+| C4 | CB-132 | Occupancy + collections dashboard + activity feed |
 
 **Invoice generation locking:** `FOR UPDATE` on resident (or allotment) while creating open invoice for period; unique `(residentId, periodStart)` prevents duplicates.
 

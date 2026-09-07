@@ -2,6 +2,7 @@ import { Role } from "@vaikuntham/shared";
 import {
   BedDouble,
   Building2,
+  IndianRupee,
   LayoutDashboard,
   LayoutGrid,
   ScrollText,
@@ -55,6 +56,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Allotment",
     icon: BedDouble,
     permission: "manageAllotment",
+    section: "ops",
+  },
+  {
+    href: "/dashboard/fees",
+    label: "Fees",
+    icon: IndianRupee,
+    permission: "managePayments",
     section: "ops",
   },
   {

@@ -23,6 +23,10 @@
     "db:local:up": "docker compose up -d postgres",
     "db:local:down": "docker compose down",
     "db:local:setup": "docker compose up -d postgres && node scripts/wait-local-postgres.mjs && DATABASE_URL=postgresql://postgres:dev@localhost:5433/vaikuntham npm run db:migrate:deploy",
+    "provision:local-admin": "node scripts/provision-local-admin.mjs",
+    "provision:link-user": "node scripts/link-clerk-user.mjs",
+    "seed:demo": "node scripts/seed-demo-data.mjs",
+    "seed:demo:reset": "node scripts/seed-demo-data.mjs --reset",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

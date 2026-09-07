@@ -5,7 +5,14 @@ import {
   isAuthDevBypass,
   isClerkConfigured,
 } from "@/lib/utils";
-import { API_ROUTES, type PageWithSession } from "@vaikuntham/shared";
+import {
+  API_ROUTES,
+  can,
+  formatPaise,
+  type BillingSummaryDto,
+  type DashboardActivityDto,
+  type PageWithSession,
+} from "@vaikuntham/shared";
 import { ROLE_LABELS } from "@vaikuntham/shared";
 
 type DashboardStats = {
@@ -14,6 +21,15 @@ type DashboardStats = {
   auditCount: number | null;
   memberCount: number | null;
 };
+
+function formatActivityTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-IN", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export async function DashboardStatsPanel() {
   const statsResult = await apiFetch<PageWithSession<DashboardStats>>(
@@ -29,6 +45,20 @@ export async function DashboardStatsPanel() {
     auditCount,
     memberCount,
   } = statsResult.data;
+
+  let billing: BillingSummaryDto | null = null;
+  let activity: DashboardActivityDto | null = null;
+
+  if (can(session.role, "viewReports")) {
+    const [billingResult, activityResult] = await Promise.all([
+      apiFetch<BillingSummaryDto>(API_ROUTES.fees.summary),
+      apiFetch<DashboardActivityDto>(API_ROUTES.dashboard.activity),
+    ]);
+    redirectOnApiAuthFailure(billingResult);
+    redirectOnApiAuthFailure(activityResult);
+    if (billingResult.ok) billing = billingResult.data;
+    if (activityResult.ok) activity = activityResult.data;
+  }
 
   const occupancy =
     bedCount === 0 ? "—" : `${Math.round((occupiedCount / bedCount) * 100)}%`;
@@ -57,6 +87,18 @@ export async function DashboardStatsPanel() {
       label: "Audit events",
       value: String(auditCount),
       hint: "Sensitive actions",
+    });
+  }
+  if (billing) {
+    kpis.push({
+      label: "Open dues",
+      value: formatPaise(billing.openDuesPaise),
+      hint: "Unpaid invoice balance",
+    });
+    kpis.push({
+      label: "Collected MTD",
+      value: formatPaise(billing.collectedMtdPaise),
+      hint: "Payments this month",
     });
   }
 
@@ -92,28 +134,45 @@ export async function DashboardStatsPanel() {
 
       <section className="mt-8 rounded-lg border border-(--color-border) bg-(--color-paper) p-5">
         <h2 className="font-display text-lg text-(--color-ink)">
-          Foundation status
+          Recent activity
         </h2>
-        <ul className="mt-4 space-y-3 text-sm text-(--color-ink-soft)">
-          <li className="flex items-center gap-2">
-            <StatusPill tone="vacant">Done</StatusPill>
-            NestJS API + Next.js web split
-          </li>
-          <li className="flex items-center gap-2">
-            <StatusPill tone="vacant">Done</StatusPill>
-            Supabase schema + membership bootstrap
-          </li>
-          <li className="flex items-center gap-2">
-            <StatusPill tone={clerkReady || bypass ? "vacant" : "partial"}>
-              {bypass ? "Bypass" : clerkReady ? "Clerk" : "Needs keys"}
-            </StatusPill>
-            Auth {bypass ? "(dev bypass)" : clerkReady ? "wired" : "pending"}
-          </li>
-          <li className="flex items-center gap-2">
-            <StatusPill tone="partial">Next</StatusPill>
-            Fee plans and payments (W3)
-          </li>
-        </ul>
+        {activity && activity.items.length > 0 ? (
+          <ul className="mt-4 divide-y divide-(--color-border)">
+            {activity.items.map((item) => (
+              <li
+                key={`${item.kind}-${item.id}`}
+                className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <div>
+                  <p className="text-sm font-medium text-(--color-ink)">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-(--color-muted)">{item.subtitle}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <StatusPill tone={item.kind === "payment" ? "vacant" : "partial"}>
+                    {item.kind === "payment" ? "Payment" : "Allotment"}
+                  </StatusPill>
+                  <time
+                    dateTime={item.occurredAt}
+                    className="text-xs text-(--color-muted)"
+                  >
+                    {formatActivityTime(item.occurredAt)}
+                  </time>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-(--color-muted)">
+            No recent allotments or payments yet.
+          </p>
+        )}
+        {!clerkReady && !bypass ? (
+          <p className="mt-4 text-xs text-(--color-muted)">
+            Configure Clerk or enable dev bypass to sign in and record activity.
+          </p>
+        ) : null}
       </section>
     </>
   );

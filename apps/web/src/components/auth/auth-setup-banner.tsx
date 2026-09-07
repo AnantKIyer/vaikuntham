@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import {
   isAuthBypassMisconfigured,
   isAuthDevBypass,
@@ -67,11 +67,9 @@ export function AuthSetupBanner() {
       <p className="font-medium">{title}</p>
       <p className="mt-1 text-(--color-ink-soft)">{body}</p>
       {!clerkReady && !bypass ? (
-        <Link href="/sign-in" className="mt-2 inline-block">
-          <Button size="sm" variant="secondary">
-            Open sign-in setup
-          </Button>
-        </Link>
+        <ButtonLink href="/sign-in" className="mt-2" size="sm" variant="secondary">
+          Open sign-in setup
+        </ButtonLink>
       ) : null}
     </div>
   );

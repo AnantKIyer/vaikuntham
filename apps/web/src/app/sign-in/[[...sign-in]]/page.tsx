@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { SignInPanel } from "@/components/auth/sign-in-panel";
 import { isAuthDevBypass, isClerkConfigured } from "@/lib/utils";
 
-export default function SignInPage() {
+export default async function SignInPage() {
   if (isAuthDevBypass()) {
     redirect("/dashboard");
   }
@@ -25,7 +26,7 @@ export default function SignInPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <SignIn />
+      <SignInPanel isSignedIn={Boolean((await auth()).userId)} />
     </div>
   );
 }

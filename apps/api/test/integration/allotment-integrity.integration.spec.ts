@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { BedStatus, Role } from "@vaikuntham/db";
 import type { SessionContext } from "@vaikuntham/shared";
+import { AllotmentModule } from "../../src/allotment/allotment.module";
 import { AllotmentService } from "../../src/allotment/allotment.service";
 import { assertAllotmentTenancy } from "../../src/allotment/allotment-tenancy";
 import { AuditModule } from "../../src/audit/audit.module";
@@ -21,8 +22,7 @@ describe("allotment integrity (integration)", () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [PrismaModule, AuditModule],
-      providers: [AllotmentService],
+      imports: [PrismaModule, AuditModule, AllotmentModule],
     }).compile();
     allotment = moduleRef.get(AllotmentService);
   });

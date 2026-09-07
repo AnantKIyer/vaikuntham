@@ -13,6 +13,11 @@ export const prisma = new PrismaClient();
 export async function resetDatabase() {
   await prisma.$transaction([
     prisma.auditLog.deleteMany(),
+    prisma.payment.deleteMany(),
+    prisma.invoiceLine.deleteMany(),
+    prisma.invoice.deleteMany(),
+    prisma.feePlanLine.deleteMany(),
+    prisma.feePlan.deleteMany(),
     prisma.allotment.deleteMany(),
     prisma.bed.deleteMany(),
     prisma.room.deleteMany(),

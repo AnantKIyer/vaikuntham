@@ -1,9 +1,15 @@
 import { Controller, Get } from "@nestjs/common";
 import { Prisma } from "@vaikuntham/db";
-import { can, type PageWithSession, type SessionContext } from "@vaikuntham/shared";
+import {
+  can,
+  type DashboardActivityDto,
+  type PageWithSession,
+  type SessionContext,
+} from "@vaikuntham/shared";
 import { AllowMember } from "../auth/allow-member.decorator";
 import { CurrentSession } from "../auth/session.decorator";
 import { PrismaService } from "../prisma/prisma.service";
+import { DashboardService } from "./dashboard.service";
 
 type DashboardCountsRow = {
   bed_count: bigint;
@@ -15,7 +21,10 @@ type DashboardCountsRow = {
 @Controller("v1/dashboard")
 @AllowMember()
 export class DashboardController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dashboard: DashboardService,
+  ) {}
 
   @Get("stats")
   async stats(@CurrentSession() session: SessionContext) {
@@ -68,5 +77,11 @@ export class DashboardController {
         memberCount: number | null;
       }>,
     };
+  }
+
+  @Get("activity")
+  async activity(@CurrentSession() session: SessionContext) {
+    const data = await this.dashboard.recentActivity(session.hostelId);
+    return { ok: true, data } satisfies { ok: true; data: DashboardActivityDto };
   }
 }

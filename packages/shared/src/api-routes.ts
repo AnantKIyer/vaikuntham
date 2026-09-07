@@ -18,6 +18,7 @@ export const API_ROUTES = {
   },
   dashboard: {
     stats: `${API_PREFIX}/dashboard/stats`,
+    activity: `${API_PREFIX}/dashboard/activity`,
   },
   structure: {
     blocks: `${API_PREFIX}/structure/blocks`,
@@ -44,5 +45,19 @@ export const API_ROUTES = {
     end: (id: string) => `${API_PREFIX}/allotments/${id}/end`,
     transfer: `${API_PREFIX}/allotments/transfer`,
     vacate: `${API_PREFIX}/allotments/vacate`,
+  },
+  fees: {
+    plans: `${API_PREFIX}/fees/plans`,
+    invoices: `${API_PREFIX}/fees/invoices`,
+    generateInvoice: `${API_PREFIX}/fees/invoices/generate`,
+    invoice: (id: string) => `${API_PREFIX}/fees/invoices/${id}`,
+    voidInvoice: (id: string) => `${API_PREFIX}/fees/invoices/${id}/void`,
+    summary: `${API_PREFIX}/fees/summary`,
+    billingResidents: `${API_PREFIX}/fees/billing-residents`,
+  },
+  payments: {
+    root: `${API_PREFIX}/payments`,
+    dues: `${API_PREFIX}/payments/dues`,
+    one: (id: string) => `${API_PREFIX}/payments/${id}`,
   },
 } as const;

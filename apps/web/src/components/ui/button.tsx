@@ -1,4 +1,5 @@
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import Link, { type LinkProps } from "next/link";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -21,6 +22,23 @@ const sizes = {
   lg: "h-12 px-5 text-base",
 };
 
+export function buttonClassName({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  className?: string;
+}) {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) disabled:pointer-events-none disabled:opacity-50",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     { className, variant = "primary", size = "md", type = "button", ...props },
@@ -30,14 +48,32 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         type={type}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) disabled:pointer-events-none disabled:opacity-50",
-          variants[variant],
-          sizes[size],
-          className,
-        )}
+        className={buttonClassName({ variant, size, className })}
         {...props}
       />
     );
   },
 );
+
+/** Next.js Link styled as Button — avoids invalid `<a><button>` nesting. */
+export function ButtonLink({
+  href,
+  className,
+  variant = "primary",
+  size = "md",
+  children,
+}: LinkProps & {
+  className?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={buttonClassName({ variant, size, className })}
+    >
+      {children}
+    </Link>
+  );
+}

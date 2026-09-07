@@ -15,6 +15,7 @@ import type {
   VacateResultDto,
 } from "@vaikuntham/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { FeesService } from "../fees/fees.service";
 import { assertAllotmentTenancy } from "./allotment-tenancy";
 
 const bedHostelInclude = {
@@ -26,7 +27,10 @@ const TX = { maxWait: 15_000, timeout: 30_000 } as const;
 
 @Injectable()
 export class AllotmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fees: FeesService,
+  ) {}
 
   async listActive(hostelId: string): Promise<AllotmentsListDto> {
     const rows = await this.prisma.allotment.findMany({
@@ -403,12 +407,11 @@ export class AllotmentService {
     return { allotments: rows.map((row) => this.toDto(row)) };
   }
 
-  /** Fees land in W3 — stub returns 0 until Invoice exists. */
   private async openDuesPaise(
-    _hostelId: string,
-    _residentId: string,
+    hostelId: string,
+    residentId: string,
   ): Promise<number> {
-    return 0;
+    return this.fees.sumOpenDuesPaise(hostelId, residentId);
   }
 
   private async endActiveInTxn(

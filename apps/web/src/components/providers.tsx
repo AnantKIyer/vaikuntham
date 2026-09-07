@@ -26,6 +26,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       publishableKey={publishableKey}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
       afterSignOutUrl="/"
     >
       {tree}

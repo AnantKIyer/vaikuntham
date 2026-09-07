@@ -5,5 +5,6 @@ export * from "./hostels";
 export * from "./structure";
 export * from "./residents";
 export * from "./allotment";
+export * from "./fees";
 export * from "./api-routes";
 export * from "./types";

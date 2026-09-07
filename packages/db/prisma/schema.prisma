@@ -35,6 +35,28 @@ enum AllotmentStatus {
   ENDED
 }
 
+enum FeeLineKind {
+  RENT
+  MESS
+  DEPOSIT
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK
+  OTHER
+}
+
 model Hostel {
   id         String   @id @default(cuid())
   name       String
@@ -50,6 +72,9 @@ model Hostel {
   residents   Resident[]
   allotments  Allotment[]
   auditLogs   AuditLog[]
+  feePlans    FeePlan[]
+  invoices    Invoice[]
+  payments    Payment[]
 }
 
 model Membership {
@@ -158,6 +183,7 @@ model Resident {
 
   hostel     Hostel      @relation(fields: [hostelId], references: [id], onDelete: Cascade)
   allotments Allotment[]
+  invoices   Invoice[]
 
   @@index([hostelId, status])
   @@index([hostelId, fullName])
@@ -200,4 +226,93 @@ model AuditLog {
 
   @@index([hostelId, createdAt])
   @@index([entityType, entityId])
+}
+
+model FeePlan {
+  id          String   @id @default(cuid())
+  hostelId    String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hostel   Hostel        @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  lines    FeePlanLine[]
+  invoices Invoice[]
+
+  @@unique([hostelId, name])
+  @@index([hostelId])
+}
+
+model FeePlanLine {
+  id          String      @id @default(cuid())
+  feePlanId   String
+  label       String
+  kind        FeeLineKind
+  amountPaise Int
+  createdAt   DateTime    @default(now())
+
+  feePlan FeePlan @relation(fields: [feePlanId], references: [id], onDelete: Cascade)
+
+  @@index([feePlanId])
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  hostelId     String
+  residentId   String
+  feePlanId    String?
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       InvoiceStatus @default(ISSUED)
+  amountPaise  Int
+  balancePaise Int
+  issuedAt     DateTime?
+  dueAt        DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  hostel   Hostel        @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  resident Resident      @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  feePlan  FeePlan?      @relation(fields: [feePlanId], references: [id], onDelete: SetNull)
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([residentId, periodStart])
+  @@index([hostelId, status])
+  @@index([hostelId, residentId])
+}
+
+model InvoiceLine {
+  id          String      @id @default(cuid())
+  invoiceId   String
+  label       String
+  kind        FeeLineKind
+  amountPaise Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  hostelId       String
+  invoiceId      String
+  amountPaise    Int
+  method         PaymentMethod
+  idempotencyKey String        @unique
+  reference      String?
+  notes          String?
+  recordedById   String
+  receivedAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+
+  hostel  Hostel  @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([hostelId, receivedAt])
+  @@index([invoiceId])
 }

@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   return (
     <DashboardShell
       title="Dashboard"
-      description="Occupancy snapshot for your hostel. Full collections KPIs land in Week 3."
+      description="Occupancy and collections snapshot for your hostel."
       breadcrumbs={[
         { href: "/dashboard", label: "App" },
         { label: "Dashboard" },
